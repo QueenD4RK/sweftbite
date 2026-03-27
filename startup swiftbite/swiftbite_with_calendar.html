@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SwiftBite — Food Delivery</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --ink:#0d0d0d; --ink2:#1a1a1a; --ink3:#2c2c2c;
+  --cream:#faf8f4; --stone:#f0ece4; --mist:#e8e2d8;
+  --gold:#c8a96e; --gold2:#e8c98e; --gold3:#f5e6c8;
+  --slate:#6b6560; --white:#ffffff; --red:#c0392b; --green:#1a6b45;
+  --sh:0 2px 16px rgba(0,0,0,0.08); --sh2:0 8px 48px rgba(0,0,0,0.14);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;background:var(--cream);color:var(--ink);overflow-x:hidden;}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none;min-height:100vh;flex-direction:column;}
+.page.active{display:flex;animation:pgIn .4s cubic-bezier(.4,0,.2,1);}
+@keyframes pgIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideRight{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes scaleIn{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes barGrow{from{width:0}to{width:var(--w)}}
+@keyframes countUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SHARED BUTTONS ── */
+.btn{border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .22s;display:inline-flex;align-items:center;gap:6px;border-radius:50px;}
+.btn-primary{background:var(--ink);color:var(--white);padding:10px 22px;font-size:.84rem;font-weight:600;}
+.btn-primary:hover{background:var(--ink3);transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.2);}
+.btn-gold{background:var(--gold);color:var(--ink);padding:10px 22px;font-size:.84rem;font-weight:700;}
+.btn-gold:hover{background:var(--gold2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,169,110,0.4);}
+.btn-ghost{background:none;color:var(--slate);padding:9px 18px;font-size:.84rem;font-weight:500;}
+.btn-ghost:hover{background:var(--stone);color:var(--ink);}
+.btn-outline{background:none;color:var(--ink);border:1.5px solid var(--mist);padding:9px 20px;font-size:.84rem;font-weight:500;}
+.btn-outline:hover{border-color:var(--ink);}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.8rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:var(--white);padding:11px 24px;border-radius:50px;font-size:.85rem;font-weight:600;z-index:9999;opacity:0;pointer-events:none;white-space:nowrap;max-width:90vw;transition:all .35s cubic-bezier(.34,1.56,.64,1);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ════════════════════════════════════════
+   CUSTOMER LOGIN PAGE
+════════════════════════════════════════ */
+.login-page{
+  min-height:100vh;display:grid;grid-template-columns:1fr 1fr;
+  background:var(--cream);
+}
+.login-left{
+  background:var(--ink);display:flex;flex-direction:column;
+  justify-content:space-between;padding:4rem;
+  position:relative;overflow:hidden;
+  animation:slideRight .6s ease;
+}
+.login-left::before{
+  content:'';position:absolute;bottom:-100px;right:-100px;
+  width:400px;height:400px;
+  background:radial-gradient(circle,rgba(200,169,110,0.14),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.login-left::after{
+  content:'';position:absolute;top:-60px;left:-60px;
+  width:260px;height:260px;
+  background:radial-gradient(circle,rgba(200,169,110,0.06),transparent 70%);
+  border-radius:50%;pointer-events:none;
+}
+.ll-brand{display:flex;align-items:center;gap:10px;position:relative;z-index:2;}
+.ll-brand-icon{width:42px;height:42px;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:transform .3s;}
+.ll-brand-icon:hover{transform:rotate(-8deg) scale(1.1);}
+.ll-brand-name{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:var(--white);}
+.ll-brand-name span{color:var(--gold);}
+.ll-content{position:relative;z-index:2;}
+.ll-quote{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,3vw,2.8rem);font-weight:600;color:var(--white);line-height:1.25;letter-spacing:-0.01em;margin-bottom:1.2rem;}
+.ll-quote em{font-style:italic;color:var(--gold);}
+.ll-desc{color:rgba(255,255,255,0.45);font-size:.88rem;line-height:1.7;max-width:340px;margin-bottom:2rem;}
+.ll-stats{display:flex;flex-direction:column;gap:.8rem;}
+.ll-stat{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1rem 1.2rem;display:flex;align-items:center;gap:1rem;cursor:pointer;transition:all .25s;}
+.ll-stat:hover{background:rgba(255,255,255,0.09);border-color:rgba(200,169,110,0.3);transform:translateX(4px);}
+.ll-stat-ic{width:38px;height:38px;border-radius:10px;background:var(--gold3);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.ll-stat-text .t1{color:rgba(255,255,255,0.8);font-weight:600;font-size:.82rem;}
+.ll-stat-text .t2{color:rgba(255,255,255,0.35);font-size:.72rem;margin-top:2px;}
+.ll-stat-val{color:var(--gold);font-weight:700;font-size:.88rem;margin-left:auto;}
+.ll-footer{color:rgba(255,255,255,0.2);font-size:.74rem;position:relative;z-index:2;}
+
+.login-right{
+  display:flex;align-items:center;justify-content:center;
+  padding:4rem 3rem;animation:slideLeft .6s ease;
+}
+.login-box{width:100%;max-width:420px;}
+.login-title{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:700;color:var(--ink);margin-bottom:.3rem;letter-spacing:-0.01em;}
+.login-sub{color:var(--slate);font-size:.84rem;margin-bottom:2rem;}
+.form-group{margin-bottom:1.1rem;}
+.form-group label{display:block;font-size:.77rem;font-weight:700;color:var(--ink);margin-bottom:.45rem;letter-spacing:.02em;}
+.input-wrap{position:relative;}
+.input-wrap .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+.form-group input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--mist);border-radius:12px;font-family:'Outfit',sans-serif;font-size:.88rem;background:var(--white);color:var(--ink);outline:none;transition:all .2s;}
+.form-group input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,110,0.15);}
+.form-group input.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(192,57,43,0.1);}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:.85rem;color:var(--slate);transition:color .2s;}
+.eye-btn:hover{color:var(--ink);}
+.forgot{display:block;text-align:right;color:var(--gold);font-size:.78rem;font-weight:600;text-decoration:none;cursor:pointer;margin:-4px 0 1.2rem;}
+.forgot:hover{text-decoration:underline;}
+.btn-submit{width:100%;padding:13px;border-radius:50px;background:var(--ink);color:var(--white);font-family:'Outfit',sans-serif;font-size:.92rem;font-weight:700;border:none;cursor:pointer;transition:all .22s;margin-bottom:1.2rem;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-submit:hover{background:var(--gold);color:var(--ink);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,169,110,0.35);}
+.btn-submit:active{transform:translateY(0);}
+.divider{display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--mist);}
+.divider span{color:var(--slate);font-size:.75rem;white-space:nowrap;}
+.soc-btns{display:flex;gap:.7rem;margin-bottom:1.2rem;}
+.soc-btn{flex:1;padding:11px;border:1.5px solid var(--mist);border-radius:12px;background:var(--white);font-family:'Outfit',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--ink);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.soc-btn:hover{border-color:var(--ink);transform:translateY(-1px);box-shadow:var(--sh);}
+.err-msg{background:#fef2f2;border:1px solid #fecaca;color:var(--red);font-size:.78rem;padding:.7rem 1rem;border-radius:9px;margin-bottom:1rem;display:none;}
+.err-msg.show{display:block;animation:fadeIn .2s;}
+.admin-link-btn{width:100%;padding:11px;border-radius:50px;background:none;border:1.5px solid rgba(200,169,110,0.35);color:var(--gold);font-family:'Outfit',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:.6rem;}
+.admin-link-btn:hover{background:rgba(200,169,110,0.08);border-color:var(--gold);transform:translateY(-1px);}
+
+/* ════════════════════════════════════════
+   ADMIN LOGIN PAGE
+════════════════════════════════════════ */
+.admin-login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);position:relative;overflow:hidden;}
+.admin-login-page::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(200,169,110,0.08),transparent 70%);pointer-events:none;}
+.admin-login-page::after{content:'';position:absolute;bottom:-150px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(200,169,110,0.05),transparent 70%);border-radius:50%;pointer-events:none;}
+.admin-login-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:3rem 2.5rem;width:100%;max-width:420px;backdrop-filter:blur(12px);animation:scaleIn .4s ease;position:relative;z-index:2;}
+.admin-shield{width:64px;height:64px;background:var(--gold);border-radius:18px;font-size:1.8rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;cursor:pointer;transition:transform .3s;}
+.admin-shield:hover{transform:rotate(-8deg) scale(1.1);}
+.admin-login-title{text-align:center;font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:700;color:var(--white);margin-bottom:.3rem;}
+.admin-login-sub{text-align:center;color:rgba(255,255,255,0.35);font-size:.8rem;margin-bottom:2rem;}
+.admin-form-group{margin-bottom:1rem;}
+.admin-form-group label{display:block;font-size:.76rem;font-weight:700;color:rgba(255,255,255,0.5);margin-bottom:.4rem;letter-spacing:.04em;text-transform:uppercase;}
+.admin-input-wrap{position:relative;}
+.admin-input-wrap .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:.9rem;pointer-events:none;}
+.admin-form-group input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid rgba(255,255,255,0.1);border-radius:12px;font-family:'Outfit',sans-serif;font-size:.88rem;background:rgba(255,255,255,0.05);color:var(--white);outline:none;transition:all .2s;}
+.admin-form-group input::placeholder{color:rgba(255,255,255,0.25);}
+.admin-form-group input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(200,169,110,0.15);}
+.admin-form-group input.err{border-color:var(--red);}
+.admin-err{background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:#ff8080;font-size:.78rem;padding:.7rem 1rem;border-radius:9px;margin-bottom:1rem;display:none;}
+.admin-err.show{display:block;animation:fadeIn .2s;}
+.admin-hint{background:rgba(200,169,110,0.08);border:1px solid rgba(200,169,110,0.2);border-radius:10px;padding:.7rem 1rem;font-size:.75rem;color:rgba(255,255,255,0.45);line-height:1.6;margin-bottom:1.2rem;border-left:3px solid var(--gold);}
+.btn-admin-submit{width:100%;padding:13px;border-radius:50px;background:var(--gold);color:var(--ink);font-family:'Outfit',sans-serif;font-size:.92rem;font-weight:700;border:none;cursor:pointer;transition:all .22s;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:1rem;}
+.btn-admin-submit:hover{background:var(--gold2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,169,110,0.4);}
+.admin-back{text-align:center;margin-top:.5rem;}
+.admin-back a{color:rgba(255,255,255,0.3);font-size:.78rem;cursor:pointer;transition:color .2s;text-decoration:none;}
+.admin-back a:hover{color:var(--gold);}
+
+/* ════════════════════════════════════════
+   ADMIN DASHBOARD
+════════════════════════════════════════ */
+.adm-shell{display:flex;min-height:100vh;background:#f4f4f6;}
+.adm-sidebar{width:240px;min-height:100vh;background:var(--ink2);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;transition:width .3s;}
+.adm-sidebar-brand{padding:1.4rem 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;cursor:pointer;}
+.adm-sidebar-brand:hover .adm-brand-icon{transform:rotate(-8deg);}
+.adm-brand-icon{width:36px;height:36px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:transform .3s;flex-shrink:0;}
+.adm-brand-name{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;color:var(--white);}
+.adm-brand-name span{color:var(--gold);}
+.adm-badge{background:rgba(200,169,110,0.15);color:var(--gold);font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:50px;border:1px solid rgba(200,169,110,0.25);}
+.adm-nav{flex:1;padding:.8rem 0;overflow-y:auto;}
+.adm-nav-section{padding:.5rem 1.2rem .3rem;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.2);}
+.adm-nav-item{display:flex;align-items:center;gap:.7rem;padding:.65rem 1.2rem;color:rgba(255,255,255,0.45);font-size:.84rem;font-weight:500;cursor:pointer;transition:all .2s;border:none;background:none;width:100%;text-align:left;position:relative;border-radius:0;}
+.adm-nav-item:hover{color:rgba(255,255,255,0.9);background:rgba(255,255,255,0.05);}
+.adm-nav-item.active{color:var(--white);background:rgba(200,169,110,0.12);border-right:2px solid var(--gold);}
+.adm-nav-item.active .nav-ic{filter:none;}
+.nav-ic{font-size:1rem;flex-shrink:0;}
+.adm-nav-badge{background:var(--red);color:var(--white);font-size:.6rem;font-weight:800;padding:2px 7px;border-radius:50px;margin-left:auto;}
+.adm-sidebar-footer{padding:.8rem 1.2rem 1rem;border-top:1px solid rgba(255,255,255,0.06);}
+.adm-user-row{display:flex;align-items:center;gap:.8rem;padding:.7rem;border-radius:12px;cursor:pointer;transition:all .2s;}
+.adm-user-row:hover{background:rgba(255,255,255,0.05);}
+.adm-avatar{width:36px;height:36px;border-radius:10px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;color:var(--ink);flex-shrink:0;}
+.adm-user-info .u1{color:rgba(255,255,255,0.8);font-weight:600;font-size:.82rem;}
+.adm-user-info .u2{color:rgba(255,255,255,0.3);font-size:.7rem;margin-top:1px;}
+.adm-signout{display:flex;align-items:center;gap:8px;padding:.55rem .7rem;border-radius:8px;color:rgba(255,255,255,0.25);font-size:.78rem;cursor:pointer;transition:all .2s;margin-top:.4rem;border:none;background:none;width:100%;text-align:left;}
+.adm-signout:hover{color:var(--red);background:rgba(192,57,43,0.08);}
+
+.adm-main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.adm-topbar{background:var(--white);border-bottom:1px solid var(--mist);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;animation:slideUp .4s ease;}
+
+.adm-page-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;color:var(--ink);}
+.adm-page-sub{font-size:.75rem;color:var(--slate);margin-top:1px;}
+.adm-topbar-right{display:flex;align-items:center;gap:.7rem;}
+.adm-notif-btn{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--mist);background:var(--white);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .2s;position:relative;}
+.adm-notif-btn:hover{border-color:var(--ink);background:var(--stone);transform:translateY(-1px);}
+.notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;border:1.5px solid var(--white);}
+.adm-search-bar{display:flex;align-items:center;gap:8px;background:var(--stone);border-radius:50px;padding:8px 14px;font-size:.82rem;color:var(--slate);cursor:pointer;transition:all .2s;border:1.5px solid transparent;}
+.adm-search-bar:hover{border-color:var(--mist);background:var(--white);}
+.adm-content{flex:1;padding:1.5rem 2rem;overflow-y:auto;animation:slideUp .5s ease;}
+
+/* stat cards */
+.adm-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+.adm-stat{background:var(--white);border-radius:16px;padding:1.2rem 1.4rem;border:1.5px solid var(--mist);cursor:pointer;transition:all .25s;position:relative;overflow:hidden;}
+.adm-stat::after{content:'';position:absolute;inset:0;background:var(--gold3);opacity:0;transition:opacity .2s;}
+.adm-stat:hover{transform:translateY(-4px);box-shadow:var(--sh2);border-color:var(--gold);}
+.adm-stat:hover::after{opacity:.3;}
+.adm-stat:active{transform:translateY(-2px);}
+.adm-stat-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.9rem;position:relative;z-index:1;}
+.adm-stat-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;}
+.adm-stat-change{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:50px;}
+.adm-stat-change.up{background:#f0fdf4;color:var(--green);}
+.adm-stat-change.down{background:#fef2f2;color:var(--red);}
+.adm-stat-val{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:700;color:var(--ink);line-height:1;margin-bottom:.3rem;position:relative;z-index:1;animation:countUp .5s ease;}
+.adm-stat-lbl{font-size:.75rem;color:var(--slate);font-weight:500;position:relative;z-index:1;}
+
+/* cards */
+.adm-card{background:var(--white);border-radius:16px;border:1.5px solid var(--mist);overflow:hidden;transition:box-shadow .2s;}
+.adm-card:hover{box-shadow:var(--sh);}
+.adm-card-header{padding:1.2rem 1.4rem;border-bottom:1px solid var(--mist);display:flex;align-items:center;justify-content:space-between;}
+.adm-card-title{font-weight:700;font-size:.9rem;color:var(--ink);}
+.adm-card-sub{font-size:.75rem;color:var(--slate);font-weight:400;}
+.adm-card-body{padding:1.2rem 1.4rem;}
+.adm-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.5rem;}
+
+/* chart bars */
+.chart-wrap{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:.5rem;}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;}
+.chart-track{flex:1;width:100%;background:var(--stone);border-radius:6px 6px 0 0;position:relative;overflow:hidden;transition:all .2s;}
+.chart-col:hover .chart-track{background:var(--mist);}
+.chart-fill{position:absolute;bottom:0;left:0;right:0;background:var(--ink);border-radius:6px 6px 0 0;transition:height .8s cubic-bezier(.4,0,.2,1);animation:barFill .9s ease both;}
+.chart-fill.gold{background:var(--gold);}
+@keyframes barFill{from{height:0!important}to{}}
+.chart-label{font-size:.68rem;color:var(--slate);font-weight:500;}
+.chart-col:hover .chart-label{color:var(--ink);}
+
+/* progress bars */
+.prog-row{margin-bottom:.9rem;}
+.prog-top{display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:.35rem;}
+.prog-lbl{color:var(--slate);}
+.prog-val{font-weight:700;}
+.prog-track{height:7px;background:var(--mist);border-radius:50px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:50px;animation:progAnim .9s ease both;}
+@keyframes progAnim{from{width:0}to{}}
+
+/* table */
+.adm-table{width:100%;border-collapse:collapse;}
+.adm-table th{font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--slate);padding:.7rem 1rem;text-align:left;border-bottom:1px solid var(--mist);white-space:nowrap;}
+.adm-table td{font-size:.82rem;padding:.8rem 1rem;border-bottom:1px solid var(--stone);vertical-align:middle;}
+.adm-table tr{cursor:pointer;transition:background .15s;}
+.adm-table tr:hover td{background:var(--stone);}
+.adm-table tr:last-child td{border-bottom:none;}
+.adm-table tr:active td{background:var(--mist);}
+.sub-text{font-size:.7rem;color:var(--slate);margin-top:2px;}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:50px;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.pill:hover{transform:scale(1.05);}
+.pill.delivered{background:#f0fdf4;color:var(--green);}
+.pill.transit{background:#eff6ff;color:#2563eb;}
+.pill.pending{background:#fffbeb;color:#d97706;}
+.pill.cancelled{background:#fef2f2;color:var(--red);}
+.pill.active{background:#f0fdf4;color:var(--green);}
+.pill.standby{background:#fffbeb;color:#d97706;}
+
+/* action buttons in dashboard */
+.adm-action-btn{padding:7px 14px;border-radius:50px;border:1.5px solid var(--mist);background:var(--white);font-family:'Outfit',sans-serif;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;color:var(--ink);}
+.adm-action-btn:hover{border-color:var(--ink);background:var(--stone);transform:translateY(-1px);}
+.adm-action-btn.gold{background:var(--gold);color:var(--ink);border-color:var(--gold);}
+.adm-action-btn.gold:hover{background:var(--gold2);}
+.adm-action-btn.danger{border-color:rgba(192,57,43,0.3);color:var(--red);}
+.adm-action-btn.danger:hover{background:#fef2f2;border-color:var(--red);}
+
+/* quick actions */
+.adm-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-bottom:1.5rem;}
+.adm-quick-btn{background:var(--white);border:1.5px solid var(--mist);border-radius:14px;padding:1rem;cursor:pointer;transition:all .25s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.5rem;}
+.adm-quick-btn:hover{border-color:var(--gold);background:var(--gold3);transform:translateY(-3px);box-shadow:var(--sh);}
+.adm-quick-btn:active{transform:translateY(-1px);}
+.adm-quick-ic{font-size:1.4rem;}
+.adm-quick-lbl{font-size:.72rem;font-weight:600;color:var(--ink);}
+
+/* section panel */
+.adm-section-panel{display:none;}
+.adm-section-panel.active{display:block;animation:slideUp .35s ease;}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:800;display:none;align-items:center;justify-content:center;animation:fadeIn .2s;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--white);border-radius:20px;padding:2rem;max-width:480px;width:90%;animation:scaleIn .3s ease;position:relative;}
+.modal-close{position:absolute;top:1rem;right:1rem;width:32px;height:32px;border-radius:50%;border:1.5px solid var(--mist);background:none;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.modal-close:hover{background:var(--stone);}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;margin-bottom:.4rem;}
+.modal-sub{color:var(--slate);font-size:.82rem;margin-bottom:1.5rem;}
+.modal-actions{display:flex;gap:.8rem;margin-top:1.5rem;}
+
+/* ════════════════════════════════════════
+   CUSTOMER MENU PAGE
+════════════════════════════════════════ */
+.cust-wrap{display:flex;flex-direction:column;min-height:100vh;background:var(--cream);}
+.cust-nav{position:sticky;top:0;z-index:500;background:rgba(250,248,244,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--mist);padding:0 5%;height:68px;display:flex;align-items:center;justify-content:space-between;}
+.cust-brand{display:flex;align-items:center;gap:10px;cursor:pointer;transition:opacity .2s;}
+.cust-brand:hover{opacity:.8;}
+.cust-brand-icon{width:36px;height:36px;background:var(--ink);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:transform .3s;}
+.cust-brand:hover .cust-brand-icon{transform:rotate(-8deg);}
+.cust-brand-name{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--ink);}
+.cust-brand-name span{color:var(--gold);}
+.cust-nav-right{display:flex;align-items:center;gap:.8rem;}
+.cust-cart-btn{display:flex;align-items:center;gap:8px;background:var(--ink);color:var(--white);border:none;border-radius:50px;padding:10px 20px;font-family:'Outfit',sans-serif;font-size:.84rem;font-weight:600;cursor:pointer;transition:all .22s;}
+.cust-cart-btn:hover{background:var(--gold);color:var(--ink);transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,169,110,0.3);}
+.cust-cart-btn:active{transform:translateY(0);}
+.cart-badge{background:var(--gold);color:var(--ink);border-radius:50%;width:20px;height:20px;font-size:.68rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;transition:transform .2s;}
+.cart-badge.bump{animation:pulse .3s ease;}
+.cust-signout{padding:9px 16px;border-radius:50px;border:1.5px solid var(--mist);background:none;font-family:'Outfit',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--slate);transition:all .2s;}
+.cust-signout:hover{border-color:var(--red);color:var(--red);background:#fef2f2;}
+
+.cust-banner{background:var(--ink);padding:3rem 5% 2.5rem;position:relative;overflow:hidden;}
+.cust-banner::before{content:'';position:absolute;top:-80px;right:-80px;width:400px;height:400px;background:radial-gradient(circle,rgba(200,169,110,0.12),transparent 70%);border-radius:50%;}
+.cust-banner-inner{position:relative;z-index:2;max-width:600px;}
+.cust-banner-eyebrow{display:inline-flex;align-items:center;gap:6px;background:rgba(200,169,110,0.15);color:var(--gold);border:1px solid rgba(200,169,110,0.3);padding:4px 14px;border-radius:50px;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:1rem;}
+.cust-banner h2{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,4vw,3rem);font-weight:700;color:var(--white);line-height:1.15;letter-spacing:-0.02em;margin-bottom:.6rem;}
+.cust-banner h2 em{font-style:italic;color:var(--gold);}
+.cust-banner p{color:rgba(255,255,255,0.5);font-size:.9rem;line-height:1.7;}
+
+.cust-toolbar{padding:1.2rem 5%;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;border-bottom:1px solid var(--mist);background:var(--white);position:sticky;top:68px;z-index:400;}
+.cust-search{flex:1;min-width:200px;position:relative;}
+.cust-search input{width:100%;padding:10px 14px 10px 38px;border:1.5px solid var(--mist);border-radius:50px;font-family:'Outfit',sans-serif;font-size:.85rem;background:var(--cream);color:var(--ink);outline:none;transition:all .2s;}
+.cust-search input:focus{border-color:var(--gold);background:var(--white);}
+.cust-search .s-ic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:.85rem;pointer-events:none;}
+.filter-tabs{display:flex;gap:.4rem;flex-wrap:wrap;}
+.filter-tab{padding:7px 16px;border-radius:50px;border:1.5px solid var(--mist);font-family:'Outfit',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;background:var(--white);color:var(--slate);transition:all .2s;}
+.filter-tab:hover{border-color:var(--ink);color:var(--ink);transform:translateY(-1px);}
+.filter-tab.active{background:var(--ink);color:var(--white);border-color:var(--ink);}
+.filter-tab:active{transform:translateY(0);}
+
+.cust-main{flex:1;padding:2rem 5%;}
+.cat-title{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;color:var(--ink);margin:2rem 0 1.2rem;padding-bottom:.6rem;border-bottom:2px solid var(--mist);display:flex;align-items:center;gap:.8rem;}
+.cat-title span{font-family:'Outfit',sans-serif;font-size:.75rem;color:var(--slate);font-weight:500;}
+.menu-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.4rem;margin-bottom:.5rem;}
+.menu-card{background:var(--white);border-radius:20px;border:1.5px solid var(--mist);overflow:hidden;transition:all .25s;display:flex;flex-direction:column;cursor:pointer;}
+.menu-card:hover{transform:translateY(-6px);box-shadow:var(--sh2);border-color:var(--gold);}
+.menu-card:active{transform:translateY(-3px);}
+.menu-img{height:160px;overflow:hidden;position:relative;background:var(--stone);}
+.menu-img img{width:100%;height:100%;object-fit:cover;transition:transform .4s;}
+.menu-card:hover .menu-img img{transform:scale(1.06);}
+.menu-badge{position:absolute;top:10px;left:10px;padding:3px 10px;border-radius:50px;font-size:.62rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;}
+.menu-badge.bestseller{background:var(--gold);color:var(--ink);}
+.menu-badge.new{background:var(--green);color:var(--white);}
+.menu-badge.hot{background:var(--red);color:var(--white);}
+.menu-body{padding:1.2rem;flex:1;display:flex;flex-direction:column;}
+.menu-name{font-weight:700;font-size:.95rem;color:var(--ink);margin-bottom:.3rem;}
+.menu-desc{color:var(--slate);font-size:.78rem;line-height:1.6;flex:1;margin-bottom:.9rem;}
+.menu-footer{display:flex;align-items:center;justify-content:space-between;}
+.menu-price{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:700;color:var(--ink);line-height:1;}
+.menu-price small{font-family:'Outfit',sans-serif;font-size:.72rem;color:var(--slate);font-weight:400;}
+.add-btn{width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--white);border:none;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .22s;flex-shrink:0;}
+.add-btn:hover{background:var(--gold);color:var(--ink);transform:scale(1.15) rotate(90deg);}
+.add-btn:active{transform:scale(1.05);}
+.qty-ctrl{display:flex;align-items:center;gap:7px;}
+.qty-btn{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--mist);background:none;cursor:pointer;font-size:.95rem;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--ink);font-weight:700;}
+.qty-btn:hover{background:var(--stone);border-color:var(--ink);transform:scale(1.1);}
+.qty-btn:active{transform:scale(1);}
+.qty-num{font-weight:700;font-size:.9rem;min-width:18px;text-align:center;}
+
+/* cart drawer */
+.cart-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:899;opacity:0;pointer-events:none;transition:opacity .3s;}
+.cart-overlay.open{opacity:1;pointer-events:all;}
+.cart-drawer{position:fixed;right:-420px;top:0;bottom:0;width:400px;max-width:100vw;background:var(--white);z-index:900;box-shadow:-8px 0 48px rgba(0,0,0,0.12);display:flex;flex-direction:column;transition:right .35s cubic-bezier(.4,0,.2,1);}
+.cart-drawer.open{right:0;}
+.cart-head{padding:1.4rem 1.5rem;border-bottom:1px solid var(--mist);display:flex;align-items:center;justify-content:space-between;}
+.cart-head h3{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;}
+.cart-x{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--mist);background:none;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.cart-x:hover{background:var(--stone);border-color:var(--ink);transform:rotate(90deg);}
+.cart-items{flex:1;overflow-y:auto;padding:1rem 1.5rem;}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:.8rem;color:var(--slate);font-size:.88rem;}
+.cart-empty-ic{font-size:3rem;opacity:.3;}
+.cart-item{display:flex;align-items:center;gap:1rem;padding:.9rem 0;border-bottom:1px solid var(--mist);transition:background .15s;border-radius:8px;cursor:pointer;}
+.cart-item:hover{background:var(--stone);padding-left:.5rem;padding-right:.5rem;}
+.cart-item-thumb{width:48px;height:48px;border-radius:10px;overflow:hidden;flex-shrink:0;}
+.cart-item-thumb img{width:100%;height:100%;object-fit:cover;}
+.cart-item-info{flex:1;}
+.cart-item-name{font-weight:600;font-size:.88rem;color:var(--ink);}
+.cart-item-price{color:var(--gold);font-weight:700;font-size:.82rem;margin-top:2px;}
+.cart-item-controls{display:flex;align-items:center;gap:6px;margin-top:.4rem;}
+.cart-rm{background:none;border:none;color:var(--slate);font-size:.72rem;cursor:pointer;margin-left:4px;transition:color .2s;}
+.cart-rm:hover{color:var(--red);}
+.cart-foot{padding:1.2rem 1.5rem;border-top:1px solid var(--mist);}
+.cart-row{display:flex;justify-content:space-between;font-size:.84rem;color:var(--slate);margin-bottom:.4rem;}
+.cart-total{display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem;color:var(--ink);margin:0.7rem 0 1.2rem;padding-top:.7rem;border-top:1px solid var(--mist);}
+.checkout-btn{width:100%;padding:13px;border-radius:50px;background:var(--ink);color:var(--white);font-family:'Outfit',sans-serif;font-size:.92rem;font-weight:700;border:none;cursor:pointer;transition:all .22s;}
+.checkout-btn:hover:not(:disabled){background:var(--gold);color:var(--ink);transform:translateY(-2px);box-shadow:0 8px 24px rgba(200,169,110,0.35);}
+.checkout-btn:disabled{background:var(--mist);color:var(--slate);cursor:not-allowed;}
+
+@media(max-width:900px){
+  .login-page{grid-template-columns:1fr;}.login-left{display:none;}
+  .adm-sidebar{width:60px;}.adm-brand-name,.adm-badge,.adm-nav-item span:not(.nav-ic),.adm-nav-badge,.adm-user-info,.adm-nav-section{display:none;}
+  .adm-stats{grid-template-columns:1fr 1fr;}.adm-grid2{grid-template-columns:1fr;}.adm-quick{grid-template-columns:repeat(2,1fr);}
+  .menu-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:520px){.menu-grid{grid-template-columns:1fr;}.adm-stats{grid-template-columns:1fr;}}
+/* ── CALENDAR ── */
+#cal-grid{width:100%;overflow:hidden;}
+#cal-event-modal{display:none;}
+#cal-event-modal[style*="flex"]{display:flex!important;}
+
+</style>
+</head>
+<body>
+
+<!-- ████ TOAST ████ -->
+<div class="toast" id="toastEl"></div>
+
+<!-- ████ MODAL ████ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<!-- ████ CUSTOMER LOGIN PAGE ████ -->
+<div class="page active" id="pg-login">
+  <div class="login-page">
+    <!-- LEFT -->
+    <div class="login-left">
+      <div class="ll-brand" onclick="toast('🍽️ SwiftBite — Enterprise Food Delivery')">
+        <div class="ll-brand-icon">🍽️</div>
+        <div class="ll-brand-name">Swift<span>Bite</span></div>
+      </div>
+      <div class="ll-content">
+        <div class="ll-quote">The future of <em>food logistics</em> starts here.</div>
+        <div class="ll-desc">Join thousands of businesses using SwiftBite to deliver faster, smarter, and at scale — with enterprise-grade tools built for growth.</div>
+        <div class="ll-stats">
+          <div class="ll-stat" onclick="toast('📦 142,880 orders delivered today!')">
+            <div class="ll-stat-ic">📦</div>
+            <div class="ll-stat-text"><div class="t1">Orders delivered today</div><div class="t2">Across all active clients</div></div>
+            <div class="ll-stat-val">142,880</div>
+          </div>
+          <div class="ll-stat" onclick="toast('⭐ 4.91 average client rating!')">
+            <div class="ll-stat-ic">⭐</div>
+            <div class="ll-stat-text"><div class="t1">Average client rating</div><div class="t2">Based on 48k reviews</div></div>
+            <div class="ll-stat-val">4.91/5</div>
+          </div>
+          <div class="ll-stat" onclick="toast('⚡ Average delivery in just 18 mins!')">
+            <div class="ll-stat-ic">⚡</div>
+            <div class="ll-stat-text"><div class="t1">Avg. delivery speed</div><div class="t2">Metro-wide average</div></div>
+            <div class="ll-stat-val">18 mins</div>
+          </div>
+        </div>
+      </div>
+      <div class="ll-footer">© 2026 SwiftBite Technologies, Inc.</div>
+    </div>
+    <!-- RIGHT -->
+    <div class="login-right">
+      <div class="login-box">
+        <div class="login-title">Welcome back 👋</div>
+        <div class="login-sub">Sign in to your SwiftBite customer account</div>
+        <div class="err-msg" id="login-err"></div>
+        <div class="form-group">
+          <label>EMAIL OR USERNAME</label>
+          <div class="input-wrap">
+            <span class="ic"></span>
+            <input type="email" id="li-em" placeholder="Enter your email or username" autocomplete="email"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>PASSWORD</label>
+          <div class="input-wrap">
+            <span class="ic"></span>
+            <input type="password" id="li-pw" placeholder="Enter your password" autocomplete="current-password"/>
+            <button class="eye-btn" onclick="toggleEye('li-pw',this)">👁️</button>
+          </div>
+        </div>
+        <a class="forgot" onclick="toast('📧 Password reset link sent to your email!')">Forgot password?</a>
+        <button class="btn-submit" id="login-btn" onclick="doLogin(this)">Sign In →</button>
+        <div class="divider"><span>or continue with</span></div>
+        <div class="soc-btns">
+          <button class="soc-btn" onclick="socialLogin('Google')">🔍 Google</button>
+          <button class="soc-btn" onclick="socialLogin('Microsoft')">🪟 Microsoft</button>
+        </div>
+        <button class="admin-link-btn" onclick="goTo('pg-admin-login')">🔐 Admin Portal →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ ADMIN LOGIN PAGE ████ -->
+<div class="page" id="pg-admin-login">
+  <div class="admin-login-page">
+    <div class="admin-login-box">
+      <div class="admin-shield" onclick="toast('🛡️ SwiftBite Admin Portal')">🛡️</div>
+      <div class="admin-login-title">Admin Portal</div>
+      <div class="admin-login-sub">SwiftBite Operations Center — Authorized Access Only</div>
+      <div class="admin-err" id="admin-err"></div>
+      <div class="admin-form-group">
+        <label>Username</label>
+        <div class="admin-input-wrap">
+          <span class="ic">👤</span>
+          <input type="text" id="adm-user" placeholder="Enter admin username" autocomplete="username"/>
+        </div>
+      </div>
+      <div class="admin-form-group">
+        <label>Password</label>
+        <div class="admin-input-wrap">
+          <span class="ic">🔒</span>
+          <input type="password" id="adm-pw" placeholder="Enter admin password" autocomplete="current-password"/>
+          <button class="eye-btn" style="color:rgba(255,255,255,0.4);" onclick="toggleEye('adm-pw',this)">👁️</button>
+        </div>
+      </div>
+      <button class="btn-admin-submit" id="admin-btn" onclick="doAdminLogin(this)">🔐 Access Dashboard →</button>
+      <div class="admin-back"><a onclick="goTo('pg-login')">← Back to Customer Login</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ████ ADMIN DASHBOARD ████ -->
+<div class="page" id="pg-admin-dash">
+  <div class="adm-shell">
+    <!-- SIDEBAR -->
+    <aside class="adm-sidebar">
+      <div class="adm-sidebar-brand" onclick="adminSection('dashboard')">
+        <div class="adm-brand-icon">🍽️</div>
+        <div>
+          <div class="adm-brand-name">Swift<span>Bite</span></div>
+        </div>
+        <div class="adm-badge">Admin</div>
+      </div>
+      <nav class="adm-nav">
+        <div class="adm-nav-section">Overview</div>
+        <button class="adm-nav-item active" id="nav-dashboard" onclick="adminSection('dashboard',this)"><span class="nav-ic">📊</span> Dashboard</button>
+        <button class="adm-nav-item" id="nav-analytics" onclick="adminSection('analytics',this)"><span class="nav-ic">📈</span> Analytics</button>
+
+        <div class="adm-nav-section">Operations</div>
+        <button class="adm-nav-item" id="nav-orders" onclick="adminSection('orders',this)"><span class="nav-ic">📦</span> Orders <span class="adm-nav-badge">24</span></button>
+        <button class="adm-nav-item" id="nav-riders" onclick="adminSection('riders',this)"><span class="nav-ic">🛵</span> Riders</button>
+        <button class="adm-nav-item" id="nav-restaurants" onclick="adminSection('restaurants',this)"><span class="nav-ic">🍽️</span> Restaurants</button>
+
+        <div class="adm-nav-section">Business</div>
+        <button class="adm-nav-item" id="nav-clients" onclick="adminSection('clients',this)"><span class="nav-ic">🏢</span> Clients</button>
+        <button class="adm-nav-item" id="nav-billing" onclick="adminSection('billing',this)"><span class="nav-ic">💳</span> Billing</button>
+        <button class="adm-nav-item" id="nav-reports" onclick="adminSection('reports',this)"><span class="nav-ic">📋</span> Reports</button>
+
+        <div class="adm-nav-section">Planning</div>
+        <button class="adm-nav-item" id="nav-calendar" onclick="adminSection('calendar',this)"><span class="nav-ic">📅</span> Calendar</button>
+
+        <div class="adm-nav-section">System</div>
+        <button class="adm-nav-item" id="nav-settings" onclick="adminSection('settings',this)"><span class="nav-ic">⚙️</span> Settings</button>
+        <button class="adm-nav-item" id="nav-users" onclick="adminSection('users',this)"><span class="nav-ic">👥</span> Users</button>
+      </nav>
+      <div class="adm-sidebar-footer">
+        <div class="adm-user-row" onclick="openModal('profile')">
+          <div class="adm-avatar">AD</div>
+          <div class="adm-user-info"><div class="u1">Admin User</div><div class="u2">Super Admin</div></div>
+        </div>
+        <button class="adm-signout" onclick="adminLogout()">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="adm-main">
+      <!-- TOPBAR -->
+      <div class="adm-topbar">
+        <div class="adm-topbar-left">
+          <div class="adm-page-title" id="adm-title">Dashboard Overview</div>
+          <div class="adm-page-sub" id="adm-sub">Welcome back, Admin · Wednesday, March 25, 2026</div>
+        </div>
+        <div class="adm-topbar-right">
+          <div class="adm-search-bar" onclick="toast('🔍 Search coming soon...')">🔍 Search anything...</div>
+          <button class="adm-notif-btn" onclick="openModal('notifications')">🔔<span class="notif-dot"></span></button>
+          <button class="btn btn-primary" style="font-size:.8rem;padding:8px 16px;" onclick="openModal('neworder')">+ New Order</button>
+        </div>
+      </div>
+
+      <!-- CONTENT AREA -->
+      <div class="adm-content">
+
+        <!-- ── DASHBOARD PANEL ── -->
+        <div class="adm-section-panel active" id="panel-dashboard">
+          <!-- Quick Actions -->
+          <div class="adm-quick">
+            <button class="adm-quick-btn" onclick="openModal('neworder')"><div class="adm-quick-ic">📦</div><div class="adm-quick-lbl">New Order</div></button>
+            <button class="adm-quick-btn" onclick="adminSection('riders',document.getElementById('nav-riders'))"><div class="adm-quick-ic">🛵</div><div class="adm-quick-lbl">Dispatch Rider</div></button>
+            <button class="adm-quick-btn" onclick="openModal('report')"><div class="adm-quick-ic">📋</div><div class="adm-quick-lbl">Export Report</div></button>
+            <button class="adm-quick-btn" onclick="openModal('addclient')"><div class="adm-quick-ic">🏢</div><div class="adm-quick-lbl">Add Client</div></button>
+          </div>
+          <!-- Stats -->
+          <div class="adm-stats">
+            <div class="adm-stat" onclick="adminSection('orders',document.getElementById('nav-orders'));toast('📦 Viewing orders...')">
+              <div class="adm-stat-top"><div class="adm-stat-icon" style="background:#f0fdf4;">📦</div><div class="adm-stat-change up">▲ 12.4%</div></div>
+              <div class="adm-stat-val">4,291</div><div class="adm-stat-lbl">Orders Today</div>
+            </div>
+            <div class="adm-stat" onclick="adminSection('billing',document.getElementById('nav-billing'));toast('💰 Viewing revenue...')">
+              <div class="adm-stat-top"><div class="adm-stat-icon" style="background:#fffbeb;">💰</div><div class="adm-stat-change up">▲ 8.7%</div></div>
+              <div class="adm-stat-val">₱821K</div><div class="adm-stat-lbl">Revenue Today</div>
+            </div>
+            <div class="adm-stat" onclick="adminSection('riders',document.getElementById('nav-riders'));toast('🛵 Viewing riders...')">
+              <div class="adm-stat-top"><div class="adm-stat-icon" style="background:#eff6ff;">🛵</div><div class="adm-stat-change down">▼ 3 offline</div></div>
+              <div class="adm-stat-val">342</div><div class="adm-stat-lbl">Active Riders</div>
+            </div>
+            <div class="adm-stat" onclick="adminSection('analytics',document.getElementById('nav-analytics'));toast('⭐ Viewing ratings...')">
+              <div class="adm-stat-top"><div class="adm-stat-icon" style="background:var(--gold3);">⭐</div><div class="adm-stat-change up">▲ 0.04</div></div>
+              <div class="adm-stat-val">4.91</div><div class="adm-stat-lbl">Avg. Rating</div>
+            </div>
+          </div>
+          <!-- Charts -->
+          <div class="adm-grid2">
+            <div class="adm-card">
+              <div class="adm-card-header">
+                <div><div class="adm-card-title">Weekly Orders</div><div class="adm-card-sub">Last 7 days</div></div>
+                <button class="adm-action-btn" onclick="toast('📊 Detailed analytics opened!')">View Full →</button>
+              </div>
+              <div class="adm-card-body">
+                <div class="chart-wrap">
+                  <div class="chart-col" onclick="toast('Monday: 2,240 orders')"><div class="chart-track"><div class="chart-fill" style="height:55%"></div></div><div class="chart-label">Mon</div></div>
+                  <div class="chart-col" onclick="toast('Tuesday: 2,855 orders')"><div class="chart-track"><div class="chart-fill" style="height:70%"></div></div><div class="chart-label">Tue</div></div>
+                  <div class="chart-col" onclick="toast('Wednesday: 2,448 orders')"><div class="chart-track"><div class="chart-fill" style="height:60%"></div></div><div class="chart-label">Wed</div></div>
+                  <div class="chart-col" onclick="toast('Thursday: 3,467 orders')"><div class="chart-track"><div class="chart-fill" style="height:85%"></div></div><div class="chart-label">Thu</div></div>
+                  <div class="chart-col" onclick="toast('Friday: 3,875 orders')"><div class="chart-track"><div class="chart-fill gold" style="height:95%"></div></div><div class="chart-label">Fri</div></div>
+                  <div class="chart-col" onclick="toast('Saturday: 3,181 orders')"><div class="chart-track"><div class="chart-fill gold" style="height:78%"></div></div><div class="chart-label">Sat</div></div>
+                  <div class="chart-col" onclick="toast('Sunday: 3,670 orders')"><div class="chart-track"><div class="chart-fill gold" style="height:90%"></div></div><div class="chart-label">Sun</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="adm-card">
+              <div class="adm-card-header">
+                <div><div class="adm-card-title">Revenue by Plan</div><div class="adm-card-sub">This month</div></div>
+                <button class="adm-action-btn" onclick="adminSection('billing',document.getElementById('nav-billing'))">Details →</button>
+              </div>
+              <div class="adm-card-body">
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('🏢 Enterprise: ₱4.2M — 78% of total')">
+                  <div class="prog-top"><span class="prog-lbl">Enterprise</span><span class="prog-val">₱4.2M</span></div>
+                  <div class="prog-track"><div class="prog-fill" style="width:78%;background:var(--ink);"></div></div>
+                </div>
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('💼 Professional: ₱2.8M — 52% of total')">
+                  <div class="prog-top"><span class="prog-lbl">Professional</span><span class="prog-val">₱2.8M</span></div>
+                  <div class="prog-track"><div class="prog-fill" style="width:52%;background:var(--gold);"></div></div>
+                </div>
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('🌱 Starter: ₱980K — 23% of total')">
+                  <div class="prog-top"><span class="prog-lbl">Starter</span><span class="prog-val">₱980K</span></div>
+                  <div class="prog-track"><div class="prog-fill" style="width:23%;background:var(--slate);"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Recent Orders -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+            <div style="font-weight:700;font-size:.9rem;">Recent Orders</div>
+            <button class="adm-action-btn" onclick="adminSection('orders',document.getElementById('nav-orders'))">View All →</button>
+          </div>
+          <div class="adm-card" style="margin-bottom:1.5rem;">
+            <table class="adm-table">
+              <thead><tr><th>Order ID</th><th>Client</th><th>Items</th><th>Amount</th><th>Rider</th><th>Status</th><th>Time</th><th>Action</th></tr></thead>
+              <tbody>
+                <tr onclick="openModal('order','#SB-90412','Acme Corp','Delivered','₱18,770')"><td><strong>#SB-90412</strong></td><td>Acme Corp<div class="sub-text">Makati HQ</div></td><td>47 items</td><td><strong>₱18,770</strong></td><td>🛵 Juan D.</td><td><span class="pill delivered">✓ Delivered</span></td><td>12:08 PM</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing #SB-90412')">View</button></td></tr>
+                <tr onclick="openModal('order','#SB-90411','TechHub Inc','In Transit','₱9,240')"><td><strong>#SB-90411</strong></td><td>TechHub Inc<div class="sub-text">BGC Office</div></td><td>22 items</td><td><strong>₱9,240</strong></td><td>🛵 Maria S.</td><td><span class="pill transit">🚚 In Transit</span></td><td>12:05 PM</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing #SB-90411')">View</button></td></tr>
+                <tr onclick="openModal('order','#SB-90410','Global BPO','In Transit','₱14,350')"><td><strong>#SB-90410</strong></td><td>Global BPO<div class="sub-text">Ortigas</div></td><td>35 items</td><td><strong>₱14,350</strong></td><td>🛵 Carlo M.</td><td><span class="pill transit">🚚 In Transit</span></td><td>11:58 AM</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing #SB-90410')">View</button></td></tr>
+                <tr onclick="openModal('order','#SB-90409','Sunrise Foods','Pending','₱3,120')"><td><strong>#SB-90409</strong></td><td>Sunrise Foods<div class="sub-text">QC Branch</div></td><td>8 items</td><td><strong>₱3,120</strong></td><td>🛵 Ana R.</td><td><span class="pill pending">⏳ Pending</span></td><td>11:45 AM</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing #SB-90409')">View</button></td></tr>
+                <tr onclick="openModal('order','#SB-90408','Metro Bank','Delivered','₱24,600')"><td><strong>#SB-90408</strong></td><td>Metro Bank<div class="sub-text">Pasig</div></td><td>60 items</td><td><strong>₱24,600</strong></td><td>🛵 Rico B.</td><td><span class="pill delivered">✓ Delivered</span></td><td>11:32 AM</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing #SB-90408')">View</button></td></tr>
+                <tr onclick="openModal('order','#SB-90407','Island Grill','Cancelled','₱5,880')"><td><strong>#SB-90407</strong></td><td>Island Grill<div class="sub-text">Cebu</div></td><td>12 items</td><td><strong>₱5,880</strong></td><td>—</td><td><span class="pill cancelled">✕ Cancelled</span></td><td>11:15 AM</td><td><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('🔄 Reprocessing #SB-90407...')">Retry</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Bottom row -->
+          <div class="adm-grid2">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;"><div style="font-weight:700;font-size:.9rem;">Top Clients This Week</div><button class="adm-action-btn" onclick="adminSection('clients',document.getElementById('nav-clients'))">See All →</button></div>
+              <div class="adm-card">
+                <table class="adm-table">
+                  <thead><tr><th>Client</th><th>Orders</th><th>Revenue</th><th></th></tr></thead>
+                  <tbody>
+                    <tr onclick="openModal('client','Acme Corp')"><td><strong>Acme Corp</strong></td><td>284</td><td style="color:var(--green);font-weight:700;">₱1.2M</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Acme Corp profile opened')">View</button></td></tr>
+                    <tr onclick="openModal('client','Metro Bank')"><td><strong>Metro Bank</strong></td><td>210</td><td style="color:var(--green);font-weight:700;">₱892K</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Metro Bank profile opened')">View</button></td></tr>
+                    <tr onclick="openModal('client','TechHub Inc')"><td><strong>TechHub Inc</strong></td><td>178</td><td style="color:var(--green);font-weight:700;">₱734K</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 TechHub Inc profile opened')">View</button></td></tr>
+                    <tr onclick="openModal('client','Global BPO')"><td><strong>Global BPO</strong></td><td>155</td><td style="color:var(--green);font-weight:700;">₱608K</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Global BPO profile opened')">View</button></td></tr>
+                    <tr onclick="openModal('client','Sunrise Foods')"><td><strong>Sunrise Foods</strong></td><td>122</td><td style="color:var(--green);font-weight:700;">₱490K</td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Sunrise Foods profile opened')">View</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;"><div style="font-weight:700;font-size:.9rem;">Active Riders</div><button class="adm-action-btn" onclick="adminSection('riders',document.getElementById('nav-riders'))">Manage →</button></div>
+              <div class="adm-card">
+                <table class="adm-table">
+                  <thead><tr><th>Rider</th><th>Deliveries</th><th>Status</th><th></th></tr></thead>
+                  <tbody>
+                    <tr onclick="openModal('rider','Juan Dela Cruz')"><td><strong>Juan Dela Cruz</strong></td><td>18</td><td><span class="pill active">● Active</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🛵 Dispatching Juan...')">Dispatch</button></td></tr>
+                    <tr onclick="openModal('rider','Maria Santos')"><td><strong>Maria Santos</strong></td><td>15</td><td><span class="pill transit">🚚 On delivery</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Maria...')">Track</button></td></tr>
+                    <tr onclick="openModal('rider','Carlo Mendoza')"><td><strong>Carlo Mendoza</strong></td><td>22</td><td><span class="pill transit">🚚 On delivery</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Carlo...')">Track</button></td></tr>
+                    <tr onclick="openModal('rider','Ana Reyes')"><td><strong>Ana Reyes</strong></td><td>9</td><td><span class="pill pending">⏸ Standby</span></td><td><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('🛵 Dispatching Ana...')">Dispatch</button></td></tr>
+                    <tr onclick="openModal('rider','Rico Bautista')"><td><strong>Rico Bautista</strong></td><td>20</td><td><span class="pill active">● Active</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Rico...')">Track</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ANALYTICS PANEL ── -->
+        <div class="adm-section-panel" id="panel-analytics">
+          <div class="adm-stats">
+            <div class="adm-stat" onclick="toast('📊 Total orders this month: 124,510')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#f0fdf4;">📊</div><div class="adm-stat-change up">▲ 18.2%</div></div><div class="adm-stat-val">124K</div><div class="adm-stat-lbl">Monthly Orders</div></div>
+            <div class="adm-stat" onclick="toast('💹 Monthly revenue: ₱24.8M')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#fffbeb;">💹</div><div class="adm-stat-change up">▲ 11.3%</div></div><div class="adm-stat-val">₱24.8M</div><div class="adm-stat-lbl">Monthly Revenue</div></div>
+            <div class="adm-stat" onclick="toast('👥 Active customers: 12,400')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#eff6ff;">👥</div><div class="adm-stat-change up">▲ 5.6%</div></div><div class="adm-stat-val">12.4K</div><div class="adm-stat-lbl">Active Customers</div></div>
+            <div class="adm-stat" onclick="toast('🔄 Retention rate: 94.7%')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:var(--gold3);">🔄</div><div class="adm-stat-change up">▲ 1.2%</div></div><div class="adm-stat-val">94.7%</div><div class="adm-stat-lbl">Retention Rate</div></div>
+          </div>
+          <div class="adm-grid2">
+            <div class="adm-card">
+              <div class="adm-card-header"><div><div class="adm-card-title">Monthly Trend</div><div class="adm-card-sub">Orders per month — 2026</div></div><button class="adm-action-btn" onclick="toast('📥 Downloading report...')">Export CSV</button></div>
+              <div class="adm-card-body">
+                <div class="chart-wrap" style="gap:6px;">
+                  <div class="chart-col" onclick="toast('Jan: 89,200 orders')"><div class="chart-track"><div class="chart-fill" style="height:60%"></div></div><div class="chart-label">Jan</div></div>
+                  <div class="chart-col" onclick="toast('Feb: 74,500 orders')"><div class="chart-track"><div class="chart-fill" style="height:50%"></div></div><div class="chart-label">Feb</div></div>
+                  <div class="chart-col" onclick="toast('Mar: 124,510 orders — Current month')"><div class="chart-track"><div class="chart-fill gold" style="height:85%"></div></div><div class="chart-label">Mar</div></div>
+                  <div class="chart-col" onclick="toast('Apr: projected 130,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:88%;opacity:.35;background:var(--gold);"></div></div><div class="chart-label">Apr</div></div>
+                  <div class="chart-col" onclick="toast('May: projected 135,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:91%;opacity:.25;background:var(--gold);"></div></div><div class="chart-label">May</div></div>
+                  <div class="chart-col" onclick="toast('Jun: projected 142,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:96%;opacity:.2;background:var(--gold);"></div></div><div class="chart-label">Jun</div></div>
+                  <div class="chart-col" onclick="toast('Jul: projected 148,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:100%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Jul</div></div>
+                  <div class="chart-col" onclick="toast('Aug: projected 145,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:98%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Aug</div></div>
+                  <div class="chart-col" onclick="toast('Sep: projected 138,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:93%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Sep</div></div>
+                  <div class="chart-col" onclick="toast('Oct: projected 140,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:95%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Oct</div></div>
+                  <div class="chart-col" onclick="toast('Nov: projected 155,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:100%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Nov</div></div>
+                  <div class="chart-col" onclick="toast('Dec: projected 160,000 orders')"><div class="chart-track"><div class="chart-fill" style="height:100%;opacity:.15;background:var(--gold);"></div></div><div class="chart-label">Dec</div></div>
+                </div>
+                <div style="display:flex;gap:1.2rem;margin-top:.8rem;padding-top:.7rem;border-top:1px solid var(--mist);">
+                  <div style="display:flex;align-items:center;gap:.4rem;font-size:.74rem;color:var(--slate);"><div style="width:10px;height:10px;border-radius:3px;background:var(--ink);"></div>Actual</div>
+                  <div style="display:flex;align-items:center;gap:.4rem;font-size:.74rem;color:var(--slate);"><div style="width:10px;height:10px;border-radius:3px;background:var(--gold);opacity:.5;"></div>Projected</div>
+                  <div style="margin-left:auto;font-size:.74rem;color:var(--slate);">Peak: <strong style="color:var(--ink);">Dec (160K est.)</strong></div>
+                </div>
+              </div>
+            </div>
+            <div class="adm-card">
+              <div class="adm-card-header"><div><div class="adm-card-title">Performance Metrics</div></div><button class="adm-action-btn" onclick="toast('🔄 Refreshing metrics...')">Refresh</button></div>
+              <div class="adm-card-body">
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('✅ On-Time Delivery: 98.4%')"><div class="prog-top"><span class="prog-lbl">On-Time Delivery</span><span class="prog-val">98.4%</span></div><div class="prog-track"><div class="prog-fill" style="width:98.4%;background:var(--green);"></div></div></div>
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('🛵 Driver Utilization: 87.2%')"><div class="prog-top"><span class="prog-lbl">Driver Utilization</span><span class="prog-val">87.2%</span></div><div class="prog-track"><div class="prog-fill" style="width:87.2%;background:var(--gold);"></div></div></div>
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('🎯 Order Accuracy: 99.1%')"><div class="prog-top"><span class="prog-lbl">Order Accuracy</span><span class="prog-val">99.1%</span></div><div class="prog-track"><div class="prog-fill" style="width:99.1%;background:var(--ink);"></div></div></div>
+                <div class="prog-row" style="cursor:pointer;" onclick="toast('🔄 Client Retention: 94.7%')"><div class="prog-top"><span class="prog-lbl">Client Retention</span><span class="prog-val">94.7%</span></div><div class="prog-track"><div class="prog-fill" style="width:94.7%;background:#2563eb;"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── ORDERS PANEL ── -->
+        <div class="adm-section-panel" id="panel-orders">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap;">
+            <button class="adm-action-btn gold" onclick="openModal('neworder')">+ New Order</button>
+            <button class="adm-action-btn" onclick="toast('🔍 Filter applied: All orders')">All Orders</button>
+            <button class="adm-action-btn" onclick="toast('⏳ Filtered: Pending orders')">Pending</button>
+            <button class="adm-action-btn" onclick="toast('🚚 Filtered: In-transit orders')">In Transit</button>
+            <button class="adm-action-btn" onclick="toast('✅ Filtered: Delivered orders')">Delivered</button>
+            <button class="adm-action-btn danger" onclick="toast('📥 Exporting orders CSV...')">Export CSV</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>Order ID</th><th>Client</th><th>Items</th><th>Amount</th><th>Rider</th><th>Status</th><th>Time</th><th>Actions</th></tr></thead>
+              <tbody id="orders-tbody">
+                <tr onclick="openModal('order','#SB-90412','Acme Corp','Delivered','₱18,770')"><td><strong>#SB-90412</strong></td><td>Acme Corp<div class="sub-text">Makati HQ</div></td><td>47</td><td><strong>₱18,770</strong></td><td>🛵 Juan D.</td><td><span class="pill delivered">✓ Delivered</span></td><td>12:08 PM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing order details')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('🖨️ Printing invoice...')">Print</button></td></tr>
+                <tr onclick="openModal('order','#SB-90411','TechHub Inc','In Transit','₱9,240')"><td><strong>#SB-90411</strong></td><td>TechHub Inc<div class="sub-text">BGC</div></td><td>22</td><td><strong>₱9,240</strong></td><td>🛵 Maria S.</td><td><span class="pill transit">🚚 In Transit</span></td><td>12:05 PM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing order details')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking delivery...')">Track</button></td></tr>
+                <tr onclick="openModal('order','#SB-90410','Global BPO','In Transit','₱14,350')"><td><strong>#SB-90410</strong></td><td>Global BPO<div class="sub-text">Ortigas</div></td><td>35</td><td><strong>₱14,350</strong></td><td>🛵 Carlo M.</td><td><span class="pill transit">🚚 In Transit</span></td><td>11:58 AM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing order details')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking delivery...')">Track</button></td></tr>
+                <tr onclick="openModal('order','#SB-90409','Sunrise Foods','Pending','₱3,120')"><td><strong>#SB-90409</strong></td><td>Sunrise Foods<div class="sub-text">QC Branch</div></td><td>8</td><td><strong>₱3,120</strong></td><td>🛵 Ana R.</td><td><span class="pill pending">⏳ Pending</span></td><td>11:45 AM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('✅ Order approved!')">Approve</button><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('❌ Order cancelled')">Cancel</button></td></tr>
+                <tr onclick="openModal('order','#SB-90408','Metro Bank','Delivered','₱24,600')"><td><strong>#SB-90408</strong></td><td>Metro Bank<div class="sub-text">Pasig</div></td><td>60</td><td><strong>₱24,600</strong></td><td>🛵 Rico B.</td><td><span class="pill delivered">✓ Delivered</span></td><td>11:32 AM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing order details')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('🖨️ Printing invoice...')">Print</button></td></tr>
+                <tr onclick="openModal('order','#SB-90407','Island Grill','Cancelled','₱5,880')"><td><strong>#SB-90407</strong></td><td>Island Grill<div class="sub-text">Cebu</div></td><td>12</td><td><strong>₱5,880</strong></td><td>—</td><td><span class="pill cancelled">✕ Cancelled</span></td><td>11:15 AM</td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing order details')">View</button><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('🔄 Reprocessing order...')">Retry</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── RIDERS PANEL ── -->
+        <div class="adm-section-panel" id="panel-riders">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap;">
+            <button class="adm-action-btn gold" onclick="openModal('addrider')">+ Add Rider</button>
+            <button class="adm-action-btn" onclick="toast('📍 Live map view opened!')">Live Map</button>
+            <button class="adm-action-btn" onclick="toast('📊 Rider performance report generated!')">Performance Report</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>Rider</th><th>Zone</th><th>Deliveries Today</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr onclick="openModal('rider','Juan Dela Cruz')"><td><strong>Juan Dela Cruz</strong></td><td>Makati</td><td>18</td><td>⭐ 4.95</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🛵 Dispatching Juan to new order...')">Dispatch</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Juan on map...')">Track</button></td></tr>
+                <tr onclick="openModal('rider','Maria Santos')"><td><strong>Maria Santos</strong></td><td>BGC</td><td>15</td><td>⭐ 4.88</td><td><span class="pill transit">🚚 On delivery</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Maria on map...')">Track</button><button class="adm-action-btn" onclick="event.stopPropagation();openModal('rider','Maria Santos')">Profile</button></td></tr>
+                <tr onclick="openModal('rider','Carlo Mendoza')"><td><strong>Carlo Mendoza</strong></td><td>Ortigas</td><td>22</td><td>⭐ 4.92</td><td><span class="pill transit">🚚 On delivery</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Carlo on map...')">Track</button><button class="adm-action-btn" onclick="event.stopPropagation();openModal('rider','Carlo Mendoza')">Profile</button></td></tr>
+                <tr onclick="openModal('rider','Ana Reyes')"><td><strong>Ana Reyes</strong></td><td>QC</td><td>9</td><td>⭐ 4.79</td><td><span class="pill pending">⏸ Standby</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('🛵 Dispatching Ana to nearest order...')">Dispatch</button><button class="adm-action-btn" onclick="event.stopPropagation();openModal('rider','Ana Reyes')">Profile</button></td></tr>
+                <tr onclick="openModal('rider','Rico Bautista')"><td><strong>Rico Bautista</strong></td><td>Pasig</td><td>20</td><td>⭐ 4.91</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🛵 Dispatching Rico...')">Dispatch</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('📍 Tracking Rico...')">Track</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── RESTAURANTS PANEL ── -->
+        <div class="adm-section-panel" id="panel-restaurants">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;">
+            <button class="adm-action-btn gold" onclick="openModal('addrestaurant')">+ Add Restaurant</button>
+            <button class="adm-action-btn" onclick="toast('📊 Restaurant performance report!')">Report</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>Restaurant</th><th>Cuisine</th><th>Orders Today</th><th>Rating</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr onclick="toast('🍱 Viewing Jollibee Makati details')"><td><strong>Jollibee Makati</strong></td><td>Filipino Fast Food</td><td>340</td><td>⭐ 4.8</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing Jollibee Makati')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Jollibee Makati')">Edit</button></td></tr>
+                <tr onclick="toast('🍜 Viewing Mang Inasal BGC details')"><td><strong>Mang Inasal BGC</strong></td><td>Grilled Filipino</td><td>280</td><td>⭐ 4.7</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing Mang Inasal')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Mang Inasal')">Edit</button></td></tr>
+                <tr onclick="toast('🍣 Viewing Tokyo Tokyo Ortigas details')"><td><strong>Tokyo Tokyo</strong></td><td>Japanese</td><td>195</td><td>⭐ 4.6</td><td><span class="pill transit">⚠ Busy</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing Tokyo Tokyo')">View</button><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('⚠️ Flagged Tokyo Tokyo as overloaded')">Flag</button></td></tr>
+                <tr onclick="toast('🍕 Viewing Yellow Cab Quezon City details')"><td><strong>Yellow Cab QC</strong></td><td>Pizza & Pasta</td><td>158</td><td>⭐ 4.5</td><td><span class="pill pending">⏸ On break</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('👁️ Viewing Yellow Cab')">View</button><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('✅ Yellow Cab reactivated!')">Activate</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── CLIENTS PANEL ── -->
+        <div class="adm-section-panel" id="panel-clients">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;">
+            <button class="adm-action-btn gold" onclick="openModal('addclient')">+ Add Client</button>
+            <button class="adm-action-btn" onclick="toast('📧 Bulk email sent to all clients!')">Email All</button>
+            <button class="adm-action-btn" onclick="toast('📥 Client list exported!')">Export</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>Company</th><th>Plan</th><th>Monthly Orders</th><th>Revenue</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr onclick="openModal('client','Acme Corp')"><td><strong>Acme Corp</strong><div class="sub-text">Makati HQ</div></td><td><span class="pill delivered">Enterprise</span></td><td>284</td><td style="font-weight:700;color:var(--green);">₱1.2M</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Acme Corp profile opened')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Acme Corp')">Edit</button></td></tr>
+                <tr onclick="openModal('client','Metro Bank')"><td><strong>Metro Bank</strong><div class="sub-text">Pasig</div></td><td><span class="pill delivered">Enterprise</span></td><td>210</td><td style="font-weight:700;color:var(--green);">₱892K</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Metro Bank profile opened')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Metro Bank')">Edit</button></td></tr>
+                <tr onclick="openModal('client','TechHub Inc')"><td><strong>TechHub Inc</strong><div class="sub-text">BGC</div></td><td><span class="pill transit">Professional</span></td><td>178</td><td style="font-weight:700;color:var(--green);">₱734K</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 TechHub profile opened')">View</button><button class="adm-action-btn" onclick="event.stopPropagation();toast('⬆️ Upgrading TechHub plan...')">Upgrade</button></td></tr>
+                <tr onclick="openModal('client','Sunrise Foods')"><td><strong>Sunrise Foods</strong><div class="sub-text">QC</div></td><td><span class="pill pending">Starter</span></td><td>122</td><td style="font-weight:700;color:var(--green);">₱490K</td><td><span class="pill active">● Active</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('🏢 Sunrise profile opened')">View</button><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('⬆️ Upgrading Sunrise to Pro...')">Upgrade</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── BILLING PANEL ── -->
+        <div class="adm-section-panel" id="panel-billing">
+          <div class="adm-stats" style="margin-bottom:1.5rem;">
+            <div class="adm-stat" onclick="toast('💰 Total MRR: ₱7.98M')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#f0fdf4;">💰</div><div class="adm-stat-change up">▲ 9.2%</div></div><div class="adm-stat-val">₱7.98M</div><div class="adm-stat-lbl">Monthly Revenue</div></div>
+            <div class="adm-stat" onclick="toast('📄 48 invoices sent this month')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#eff6ff;">📄</div><div class="adm-stat-change up">+12</div></div><div class="adm-stat-val">48</div><div class="adm-stat-lbl">Invoices Sent</div></div>
+            <div class="adm-stat" onclick="toast('⏰ 3 overdue invoices!')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:#fef2f2;">⏰</div><div class="adm-stat-change down">3 overdue</div></div><div class="adm-stat-val">₱245K</div><div class="adm-stat-lbl">Outstanding</div></div>
+            <div class="adm-stat" onclick="toast('✅ ₱7.74M collected this month')"><div class="adm-stat-top"><div class="adm-stat-icon" style="background:var(--gold3);">✅</div><div class="adm-stat-change up">97% rate</div></div><div class="adm-stat-val">₱7.74M</div><div class="adm-stat-lbl">Collected</div></div>
+          </div>
+          <div style="display:flex;gap:.8rem;margin-bottom:1rem;">
+            <button class="adm-action-btn gold" onclick="toast('📄 New invoice created!')">+ New Invoice</button>
+            <button class="adm-action-btn" onclick="toast('📧 Payment reminders sent!')">Send Reminders</button>
+            <button class="adm-action-btn" onclick="toast('📥 Billing report exported!')">Export Report</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>Invoice #</th><th>Client</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr onclick="toast('📄 Viewing INV-2026-0312')"><td><strong>INV-2026-0312</strong></td><td>Acme Corp</td><td><strong>₱380,000</strong></td><td>Mar 31</td><td><span class="pill delivered">✓ Paid</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('🖨️ Downloading invoice PDF...')">Download</button></td></tr>
+                <tr onclick="toast('📄 Viewing INV-2026-0311')"><td><strong>INV-2026-0311</strong></td><td>Metro Bank</td><td><strong>₱245,000</strong></td><td>Mar 28</td><td><span class="pill cancelled">✕ Overdue</span></td><td><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('📧 Payment reminder sent to Metro Bank!')">Remind</button></td></tr>
+                <tr onclick="toast('📄 Viewing INV-2026-0310')"><td><strong>INV-2026-0310</strong></td><td>TechHub Inc</td><td><strong>₱196,000</strong></td><td>Apr 5</td><td><span class="pill pending">⏳ Pending</span></td><td><button class="adm-action-btn" onclick="event.stopPropagation();toast('📧 Invoice sent to TechHub!')">Send</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── REPORTS PANEL ── -->
+        <div class="adm-section-panel" id="panel-reports">
+          <div class="adm-grid2">
+            <div class="adm-card" style="cursor:pointer;" onclick="toast('📊 Generating delivery performance report...')">
+              <div class="adm-card-header"><div class="adm-card-title">📊 Delivery Performance</div></div>
+              <div class="adm-card-body"><p style="font-size:.82rem;color:var(--slate);margin-bottom:1rem;">On-time delivery rates, average times, and route efficiency metrics.</p><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('📥 Downloading Delivery Report PDF...')">Generate Report</button></div>
+            </div>
+            <div class="adm-card" style="cursor:pointer;" onclick="toast('💰 Generating revenue report...')">
+              <div class="adm-card-header"><div class="adm-card-title">💰 Revenue Report</div></div>
+              <div class="adm-card-body"><p style="font-size:.82rem;color:var(--slate);margin-bottom:1rem;">Monthly and quarterly revenue breakdown by plan, region, and client.</p><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('📥 Downloading Revenue Report PDF...')">Generate Report</button></div>
+            </div>
+            <div class="adm-card" style="cursor:pointer;" onclick="toast('🛵 Generating rider report...')">
+              <div class="adm-card-header"><div class="adm-card-title">🛵 Rider Performance</div></div>
+              <div class="adm-card-body"><p style="font-size:.82rem;color:var(--slate);margin-bottom:1rem;">Individual and fleet performance, ratings, delivery counts, and zones.</p><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('📥 Downloading Rider Report PDF...')">Generate Report</button></div>
+            </div>
+            <div class="adm-card" style="cursor:pointer;" onclick="toast('👥 Generating client report...')">
+              <div class="adm-card-header"><div class="adm-card-title">👥 Client Summary</div></div>
+              <div class="adm-card-body"><p style="font-size:.82rem;color:var(--slate);margin-bottom:1rem;">Client activity, order volumes, retention, and lifetime value analysis.</p><button class="adm-action-btn gold" onclick="event.stopPropagation();toast('📥 Downloading Client Report PDF...')">Generate Report</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SETTINGS PANEL ── -->
+        <div class="adm-section-panel" id="panel-settings">
+          <div class="adm-grid2">
+            <div class="adm-card">
+              <div class="adm-card-header"><div class="adm-card-title">⚙️ Platform Settings</div></div>
+              <div class="adm-card-body" style="display:flex;flex-direction:column;gap:.8rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔔 Notifications toggled!')"><span style="font-size:.84rem;font-weight:600;">Enable Notifications</span><div style="width:40px;height:22px;background:var(--green);border-radius:50px;position:relative;cursor:pointer;"><div style="position:absolute;right:3px;top:3px;width:16px;height:16px;background:white;border-radius:50%;"></div></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🌙 Dark mode toggled!')"><span style="font-size:.84rem;font-weight:600;">Dark Mode</span><div style="width:40px;height:22px;background:var(--mist);border-radius:50px;position:relative;cursor:pointer;"><div style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:var(--slate);border-radius:50%;"></div></div></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔒 Two-factor authentication enabled!')"><span style="font-size:.84rem;font-weight:600;">Two-Factor Auth</span><div style="width:40px;height:22px;background:var(--green);border-radius:50px;position:relative;"><div style="position:absolute;right:3px;top:3px;width:16px;height:16px;background:white;border-radius:50%;"></div></div></div>
+                <button class="adm-action-btn gold" style="margin-top:.3rem;" onclick="toast('💾 Settings saved successfully!')">Save Settings</button>
+              </div>
+            </div>
+            <div class="adm-card">
+              <div class="adm-card-header"><div class="adm-card-title">🔌 Integrations</div></div>
+              <div class="adm-card-body" style="display:flex;flex-direction:column;gap:.7rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔗 GCash integration settings opened!')"><span style="font-size:.84rem;font-weight:600;">💳 GCash Payments</span><span class="pill delivered">Connected</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔗 Maya integration settings opened!')"><span style="font-size:.84rem;font-weight:600;">💳 Maya</span><span class="pill delivered">Connected</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔗 Stripe integration settings opened!')"><span style="font-size:.84rem;font-weight:600;">💳 Stripe</span><span class="pill pending">Pending</span></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('🔗 SMS API settings opened!')"><span style="font-size:.84rem;font-weight:600;">📱 SMS API</span><span class="pill cancelled">Disconnected</span></div>
+                <button class="adm-action-btn" onclick="toast('➕ Add new integration...')">+ Add Integration</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── USERS PANEL ── -->
+        <div class="adm-section-panel" id="panel-users">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;">
+            <button class="adm-action-btn gold" onclick="openModal('adduser')">+ Add User</button>
+            <button class="adm-action-btn" onclick="toast('📧 Bulk invite sent!')">Bulk Invite</button>
+          </div>
+          <div class="adm-card">
+            <table class="adm-table">
+              <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Last Active</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                <tr onclick="openModal('profile')"><td><strong>Admin User</strong></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="abcacfc6c2c5ebd8dcc2cddfc9c2dfce85c8c4c6">[email&#160;protected]</a></td><td><span class="pill delivered">Super Admin</span></td><td>Just now</td><td><span class="pill active">● Online</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();openModal('profile')">Edit</button></td></tr>
+                <tr onclick="toast('👤 Viewing Maria Operations')"><td><strong>Maria Ops</strong></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="523f33203b331221253b3426303b26377c313d3f">[email&#160;protected]</a></td><td><span class="pill transit">Operations</span></td><td>2h ago</td><td><span class="pill active">● Online</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Maria Ops')">Edit</button><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('🔒 Maria suspended!')">Suspend</button></td></tr>
+                <tr onclick="toast('👤 Viewing Carlo Finance')"><td><strong>Carlo Finance</strong></td><td><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="2c4f4d5e40436c5f5b454a584e455849024f4341">[email&#160;protected]</a></td><td><span class="pill pending">Finance</span></td><td>Yesterday</td><td><span class="pill pending">⏸ Away</span></td><td style="display:flex;gap:4px;"><button class="adm-action-btn" onclick="event.stopPropagation();toast('✏️ Editing Carlo Finance')">Edit</button><button class="adm-action-btn danger" onclick="event.stopPropagation();toast('🔒 Carlo suspended!')">Suspend</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── CALENDAR PANEL ── -->
+        <div class="adm-section-panel" id="panel-calendar">
+          <div style="display:flex;gap:.8rem;margin-bottom:1.2rem;flex-wrap:wrap;align-items:center;">
+            <button class="adm-action-btn gold" onclick="openCalEventModal()">+ New Event</button>
+            <button class="adm-action-btn" onclick="calView='month';renderCal()">Month</button>
+            <button class="adm-action-btn" onclick="calView='week';renderCal()">Week</button>
+            <div style="margin-left:auto;display:flex;gap:.5rem;align-items:center;">
+              <button class="adm-action-btn" onclick="calNav(-1)">‹ Prev</button>
+              <span id="cal-header" style="font-weight:700;font-size:.95rem;min-width:160px;text-align:center;"></span>
+              <button class="adm-action-btn" onclick="calNav(1)">Next ›</button>
+            </div>
+          </div>
+          <div class="adm-card" style="padding:0;overflow:hidden;">
+            <div id="cal-grid"></div>
+          </div>
+          <!-- Upcoming Events -->
+          <div style="margin-top:1.2rem;">
+            <div style="font-weight:700;font-size:.9rem;margin-bottom:.8rem;">📌 Upcoming Events</div>
+            <div id="cal-upcoming" class="adm-card" style="padding:.8rem;"></div>
+          </div>
+        </div>
+
+        <!-- ── EVENT MODAL ── -->
+        <div id="cal-event-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:none;align-items:center;justify-content:center;">
+          <div style="background:var(--white);border-radius:20px;padding:2rem;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.2);position:relative;animation:scaleIn .3s ease;">
+            <button onclick="closeCalModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--slate);">✕</button>
+            <div id="cal-modal-title" style="font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:700;margin-bottom:.3rem;">New Event</div>
+            <div style="color:var(--slate);font-size:.78rem;margin-bottom:1.2rem;">Add a new event to the calendar</div>
+            <div style="display:flex;flex-direction:column;gap:.8rem;">
+              <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Event Title</label><input id="ev-title" style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Bulk delivery — Acme Corp"/></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:.7rem;">
+                <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Date</label><input id="ev-date" type="date" style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;"/></div>
+                <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Time</label><input id="ev-time" type="time" style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;"/></div>
+              </div>
+              <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Type</label>
+                <select id="ev-type" style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;">
+                  <option value="delivery">📦 Delivery</option>
+                  <option value="meeting">🤝 Client Meeting</option>
+                  <option value="rider">🛵 Rider Briefing</option>
+                  <option value="promo">🎉 Promo</option>
+                  <option value="other">📌 Other</option>
+                </select>
+              </div>
+              <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Notes</label><textarea id="ev-notes" rows="2" style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;resize:none;" placeholder="Optional details..."></textarea></div>
+            </div>
+            <div style="display:flex;gap:.6rem;margin-top:1.2rem;">
+              <button class="adm-action-btn gold" style="flex:1;justify-content:center;padding:11px;" onclick="saveCalEvent()">💾 Save Event</button>
+              <button class="adm-action-btn" onclick="closeCalModal()">Cancel</button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end adm-content -->
+    </div><!-- end adm-main -->
+  </div><!-- end adm-shell -->
+</div><!-- end pg-admin-dash -->
+
+<!-- ████ CUSTOMER MENU PAGE ████ -->
+<div class="page" id="pg-customer">
+  <div class="cust-wrap">
+    <nav class="cust-nav">
+      <div class="cust-brand" onclick="toast('🍽️ SwiftBite Customer Portal')">
+        <div class="cust-brand-icon">🍽️</div>
+        <div class="cust-brand-name">Swift<span>Bite</span></div>
+      </div>
+      <div class="cust-nav-right">
+        <span id="cust-greeting" style="font-size:.82rem;color:var(--slate);font-weight:500;"></span>
+        <button class="cust-signout" onclick="custLogout()">Sign Out</button>
+        <button class="cust-cart-btn" onclick="toggleCart()">
+          🛒 Cart <span class="cart-badge" id="cart-count">0</span>
+        </button>
+      </div>
+    </nav>
+    <div class="cust-banner">
+      <div class="cust-banner-inner">
+        <div class="cust-banner-eyebrow">● Today's Menu — March 25, 2026</div>
+        <h2>What are you <em>ordering</em> today?</h2>
+        <p>Fresh, quality meals delivered to your office. Browse our full menu and add items to your cart.</p>
+      </div>
+    </div>
+    <div class="cust-toolbar">
+      <div class="cust-search">
+        <span class="s-ic">🔍</span>
+        <input type="text" id="menu-search" placeholder="Search dishes..." oninput="filterMenu()"/>
+      </div>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterCat('all',this)">All</button>
+        <button class="filter-tab" onclick="filterCat('rice',this)"> Rice Meals</button>
+        <button class="filter-tab" onclick="filterCat('noodles',this)"> Noodles</button>
+        <button class="filter-tab" onclick="filterCat('salads',this)"> Salads</button>
+        <button class="filter-tab" onclick="filterCat('snacks',this)"> Snacks</button>
+        <button class="filter-tab" onclick="filterCat('drinks',this)"> Drinks</button>
+      </div>
+    </div>
+    <div class="cust-main" id="menu-container"></div>
+  </div>
+</div>
+
+<!-- CART OVERLAY + DRAWER -->
+<div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+<div class="cart-drawer" id="cart-drawer">
+  <div class="cart-head">
+    <h3>🛒 Your Order</h3>
+    <button class="cart-x" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-list"></div>
+  <div class="cart-foot">
+    <div class="cart-row"><span>Subtotal</span><span id="c-sub">₱0</span></div>
+    <div class="cart-row"><span>Delivery Fee</span><span>₱50</span></div>
+    <div class="cart-total"><span>Total</span><span id="c-total">₱0</span></div>
+    <button class="checkout-btn" id="checkout-btn" onclick="doCheckout()" disabled>Place Order →</button>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+// ══ GLOBAL STATE ══
+let isLoggedIn = false;
+let toastTmr;
+let cart = {};
+let activeCat = 'all';
+let searchQ = '';
+
+// ══ MENU DATA ══
+const menuItems = [
+  
+  {id:1,  cat:'rice',   img:'image/delicious-bento-box-featuring-grilled-chicken-rice-and-fresh-vegetables-beautifully-arranged-free-photo.jpeg',     name:'Executive Bento Box',       desc:'Grilled chicken, steamed rice, mixed veggies & miso soup.',                         price:470, badge:'bestseller'},
+  {id:2,  cat:'rice',   img:'image/onepotchickenadoboandrice-4-1657038155.avif',       name:'Chicken Adobo Rice',         desc:'Slow-braised chicken adobo over garlic fried rice with pickled papaya.',            price:280, badge:'hot'},
+  {id:3,  cat:'rice',   img:'image/filipino-beef-tapa-tapsilog-0.jpg',           name:'Beef Tapa Silog',            desc:'Marinated beef tapa, sinangag, and itlog. Classic Filipino breakfast.',             price:320, badge:null},
+  {id:4,  cat:'rice',   img:'image/Honey-Garlic-Shrimp-Rice-Bowls.jpg', name:'Garlic Butter Shrimp Rice',  desc:'Juicy shrimp sautéed in garlic butter over steamed jasmine rice.',                 price:390, badge:'new'},
+  {id:5,  cat:'rice',   img:'image/KareKareRice2_2e1e5ecf-f17b-43af-a5f6-a9d6b0268b46.webp',           name:'Kare-Kare Bento',            desc:'Oxtail kare-kare with bagoong, served with steamed rice.',                         price:520, badge:null},
+  {id:6,  cat:'noodles',img:'image/steaming-bowl-japanese-tonkotsu-ramen-served-black-bowl-featuring-chashu-pork-slices-marinated-soft-boiled-egg.webp',           name:'Beef Ramen Bowl',            desc:'Rich tonkotsu broth, chashu pork, soft egg, nori & green onions.',                 price:430, badge:'bestseller'},
+  {id:7,  cat:'noodles',img:'image/creamy-carbonara-bacon-parmesan.png',          name:'Creamy Carbonara',           desc:'Al dente pasta in rich cream sauce with bacon and parmesan.',                      price:320, badge:null},
+  {id:8,  cat:'noodles',img:'image/NOCHE-BUENAREX1-ND-Pancit-2-whqg-master768.jpg',            name:'Pancit Palabok',             desc:'Rice noodles in savory shrimp gravy topped with chicharrón.',                      price:260, badge:'new'},
+  {id:9,  cat:'noodles',img:'image/laksa noodle.jpg',         name:'Laksa Noodle Soup',          desc:'Spicy coconut curry broth with rice noodles, shrimp and tofu.',                    price:380, badge:'hot'},
+  {id:10, cat:'salads', img:'image/salad.webp',        name:'Garden Fresh Salad',         desc:'Mixed greens, cherry tomatoes, cucumber with balsamic vinaigrette.',               price:220, badge:null},
+  {id:11, cat:'salads', img:'image/grilled chicken.webp',    name:'Grilled Chicken Caesar',     desc:'Romaine, grilled chicken, croutons, parmesan & caesar dressing.',                  price:310, badge:'bestseller'},
+  {id:12, cat:'salads', img:'image/avocadp quinoa.jpg',       name:'Avocado Quinoa Bowl',        desc:'Tri-color quinoa, sweet potato, avocado, chickpeas & lemon tahini.',               price:360, badge:'new'},
+  {id:13, cat:'salads', img:'image/tuna salad.JPG',         name:'Sesame Tuna Salad',          desc:'Seared tuna, edamame, cucumber, mango with sesame ginger dressing.',               price:420, badge:null},
+  {id:14, cat:'snacks', img:'images/sandwich.jpeg',             name:'Club Sandwich',              desc:'Triple-decker with turkey, bacon, lettuce, tomato and mayo.',                      price:240, badge:null},
+  {id:15, cat:'snacks', img:'image/burger beef.jpeg',         name:'Angus Beef Slider',          desc:'Mini angus beef patty, cheddar, caramelized onions in brioche. Set of 2.',         price:290, badge:'hot'},
+  {id:16, cat:'snacks', img:'image/tacos.webp',             name:'Chicken Tacos (3pcs)',       desc:'Soft tortillas with grilled chicken, pico de gallo & guacamole.',                  price:310, badge:'new'},
+  {id:17, cat:'snacks', img:'image/fries.jpeg',             name:'Truffle Fries',              desc:'Crispy fries in truffle oil, topped with parmesan and herbs.',                     price:180, badge:null},
+  {id:18, cat:'drinks', img:'image/premium barako.jpg',             name:'Premium Barako Coffee',      desc:'Rich, bold Benguet barako served hot or iced.',                                    price:120, badge:null},
+  {id:19, cat:'drinks', img:'image/calamansi.webp',           name:'Fresh Calamansi Juice',      desc:'Freshly squeezed calamansi, lightly sweetened.',                                   price:90,  badge:'bestseller'},
+  {id:20, cat:'drinks', img:'image/shake.avif',               name:'Mango Shake',                desc:'100% Carabao mango blended smooth. No artificial flavors.',                        price:110, badge:'hot'},
+  {id:21, cat:'drinks', img:'image/matcha.webp',              name:'Matcha Latte',               desc:'Premium ceremonial-grade matcha with steamed oat milk.',                          price:150, badge:'new'},
+];
+
+// ══ CORE NAV ══
+function goTo(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='pg-customer') renderMenu();
+}
+
+function toast(msg,dur=2800) {
+  clearTimeout(toastTmr);
+  const el=document.getElementById('toastEl');
+  el.textContent=msg; el.classList.add('show');
+  toastTmr=setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+function toggleEye(id,btn) {
+  const inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+  btn.textContent=inp.type==='password'?'👁️':'🙈';
+}
+
+// ══ CUSTOMER LOGIN ══
+function doLogin(btn) {
+  const em=document.getElementById('li-em').value.trim().toLowerCase();
+  const pw=document.getElementById('li-pw').value.trim();
+  const valid=(em===''||em==='costumer@swiftbite.com'||em==='customer@swiftbite.com')&&(pw===''||pw==='swift123');
+  if(valid){
+    btn.innerHTML='<span class="spinner"></span> Signing in...';
+    btn.disabled=true;
+    setTimeout(()=>{
+      btn.innerHTML='Sign In →'; btn.disabled=false;
+      isLoggedIn=true;
+      document.getElementById('cust-greeting').textContent='👤 Welcome back!';
+      cart={}; updateCart();
+      toast('✅ Welcome back! Enjoy your meal.');
+      goTo('pg-customer');
+    },1100);
+  } else {
+    const err=document.getElementById('login-err');
+    err.textContent='❌ Invalid credentials. Use costumer@swiftbite.com / swift123 or leave blank.';
+    err.style.display='block';
+    ['li-em','li-pw'].forEach(id=>{
+      document.getElementById(id).classList.add('err');
+      setTimeout(()=>document.getElementById(id).classList.remove('err'),1500);
+    });
+    btn.style.animation='none'; void btn.offsetWidth; btn.style.animation='';
+  }
+}
+
+function socialLogin(provider) {
+  toast(`🔄 Connecting to ${provider}...`);
+  setTimeout(()=>{isLoggedIn=true;toast(`✅ Signed in with ${provider}!`);goTo('pg-customer');renderMenu();},1400);
+}
+
+function custLogout() {
+  isLoggedIn=false; cart={}; updateCart();
+  toast('👋 Signed out. See you next time!');
+  goTo('pg-login');
+}
+
+// ══ ADMIN LOGIN ══
+function doAdminLogin(btn) {
+  const u=document.getElementById('adm-user').value.trim().toLowerCase();
+  const p=document.getElementById('adm-pw').value.trim();
+  const valid=(u===''||u==='admin')&&(p===''||p==='admin123');
+  if(valid){
+    btn.innerHTML='<span class="spinner"></span> Authenticating...';
+    btn.disabled=true;
+    setTimeout(()=>{
+      btn.innerHTML='🔐 Access Dashboard →'; btn.disabled=false;
+      toast('✅ Admin access granted. Welcome!');
+      goTo('pg-admin-dash');
+      adminSection('dashboard',document.getElementById('nav-dashboard'));
+    },1100);
+  } else {
+    const err=document.getElementById('admin-err');
+    err.textContent='❌ Invalid credentials. Use admin / admin123 or leave blank.';
+    err.style.display='block';
+    ['adm-user','adm-pw'].forEach(id=>{
+      document.getElementById(id).classList.add('err');
+      setTimeout(()=>document.getElementById(id).classList.remove('err'),1500);
+    });
+  }
+}
+
+function adminLogout() {
+  toast('👋 Admin signed out.');
+  setTimeout(()=>goTo('pg-login'),600);
+}
+
+// ══ ADMIN SECTIONS ══
+function adminSection(section, btn) {
+  document.querySelectorAll('.adm-nav-item').forEach(i=>i.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.adm-section-panel').forEach(p=>p.classList.remove('active'));
+  const panel=document.getElementById('panel-'+section);
+  if(panel) panel.classList.add('active');
+  const titles={
+    dashboard:['Dashboard Overview','Welcome back, Admin · Wednesday, March 25, 2026'],
+    analytics:['Analytics','Detailed performance metrics and trends'],
+    orders:['Orders','Manage and track all delivery orders'],
+    riders:['Riders','Fleet management and rider performance'],
+    restaurants:['Restaurants','Partner restaurant management'],
+    clients:['Clients','Corporate client accounts and billing'],
+    billing:['Billing & Payments','Revenue and invoice management'],
+    reports:['Reports','Generate and export business reports'],
+    settings:['System Settings','Platform configuration and preferences'],
+    users:['User Management','Admin accounts and permissions'],
+    calendar:['Calendar','Schedule and manage events'],
+  };
+  const [t,s]=titles[section]||['Dashboard',''];
+  document.getElementById('adm-title').textContent=t;
+  document.getElementById('adm-sub').textContent=s;
+  if(section==='calendar') setTimeout(renderCal, 50);
+}
+
+// ══ MODAL SYSTEM ══
+function openModal(type,...args) {
+  const box=document.getElementById('modal-content');
+  const templates={
+    profile:`<div class="modal-title">👤 Admin Profile</div><div class="modal-sub">Manage your account details</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Full Name</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" value="Admin User"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Email</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" value="admin@swiftbite.com"/></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('💾 Profile saved!');closeModalDirect()">Save Changes</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    notifications:`<div class="modal-title">🔔 Notifications</div><div class="modal-sub">3 new alerts</div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;">
+        <div style="padding:.8rem;background:var(--gold3);border-radius:10px;cursor:pointer;border-left:3px solid var(--gold);" onclick="toast('📦 Viewing order SB-90413')"><div style="font-size:.84rem;font-weight:600;">📦 New order #SB-90413</div><div style="font-size:.74rem;color:var(--slate);">Acme Corp — Just now</div></div>
+        <div style="padding:.8rem;background:#fef2f2;border-radius:10px;cursor:pointer;border-left:3px solid var(--red);" onclick="toast('⚠️ Viewing overdue invoice')"><div style="font-size:.84rem;font-weight:600;">⚠️ Overdue invoice</div><div style="font-size:.74rem;color:var(--slate);">Metro Bank INV-2026-0311 — 3 days overdue</div></div>
+        <div style="padding:.8rem;background:#eff6ff;border-radius:10px;cursor:pointer;border-left:3px solid #2563eb;" onclick="toast('🛵 Viewing rider alert')"><div style="font-size:.84rem;font-weight:600;">🛵 Rider offline</div><div style="font-size:.74px;color:var(--slate);">3 riders went offline — 15 mins ago</div></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ All marked as read!');closeModalDirect()">Mark All Read</button></div>`,
+    neworder:`<div class="modal-title">📦 New Order</div><div class="modal-sub">Create a new delivery order</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Client</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Acme Corp</option><option>Metro Bank</option><option>TechHub Inc</option><option>Global BPO</option></select></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Items</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. 20x Executive Bento Box"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Delivery Address</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. 123 Ayala Ave, Makati"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Assign Rider</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Auto-assign</option><option>Juan Dela Cruz</option><option>Ana Reyes</option><option>Rico Bautista</option></select></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ Order #SB-90413 created!');closeModalDirect()">Create Order</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    report:`<div class="modal-title">📋 Export Report</div><div class="modal-sub">Choose report type and date range</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Report Type</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Delivery Performance</option><option>Revenue Summary</option><option>Rider Performance</option><option>Client Report</option></select></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Format</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>PDF</option><option>CSV</option><option>Excel</option></select></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('📥 Report downloaded!');closeModalDirect()">Download</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    addclient:`<div class="modal-title">🏢 Add New Client</div><div class="modal-sub">Register a new corporate client</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Company Name</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Acme Corporation"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Contact Email</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="contact@company.com" type="email"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Plan</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Starter</option><option>Professional</option><option>Enterprise</option></select></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ New client added!');closeModalDirect()">Add Client</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    addrider:`<div class="modal-title">🛵 Add New Rider</div><div class="modal-sub">Register a new delivery rider</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Full Name</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Jose Rizal"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Phone</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="09XX XXX XXXX" type="tel"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Zone</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Makati</option><option>BGC</option><option>Ortigas</option><option>QC</option><option>Pasig</option></select></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ New rider registered!');closeModalDirect()">Register Rider</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    addrestaurant:`<div class="modal-title">🍽️ Add Restaurant</div><div class="modal-sub">Register a new partner restaurant</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Restaurant Name</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Jollibee BGC"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Cuisine Type</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Filipino Fast Food"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Address</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="Full address"/></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ Restaurant added!');closeModalDirect()">Add Restaurant</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+    adduser:`<div class="modal-title">👥 Add Admin User</div><div class="modal-sub">Create a new admin account</div>
+      <div style="display:flex;flex-direction:column;gap:.8rem;">
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Full Name</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="e.g. Maria Santos"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Email</label><input style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;" placeholder="user@swiftbite.com" type="email"/></div>
+        <div><label style="font-size:.75rem;font-weight:700;display:block;margin-bottom:.3rem;">Role</label><select style="width:100%;padding:10px 12px;border:1.5px solid var(--mist);border-radius:10px;font-family:Outfit,sans-serif;font-size:.86rem;outline:none;background:white;"><option>Operations</option><option>Finance</option><option>Support</option><option>Super Admin</option></select></div>
+      </div>
+      <div class="modal-actions"><button class="adm-action-btn gold" onclick="toast('✅ User invited!');closeModalDirect()">Send Invite</button><button class="adm-action-btn" onclick="closeModalDirect()">Cancel</button></div>`,
+  };
+  if(type==='order') {
+    const [id,client,status,amount]=args;
+    box.innerHTML=`<div class="modal-title">📦 Order ${id}</div><div class="modal-sub">${client}</div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;cursor:pointer;" onclick="toast('📋 Copied order ID!')"><span style="font-size:.8rem;color:var(--slate);">Order ID</span><span style="font-weight:700;font-size:.82rem;">${id}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Status</span><span style="font-weight:700;font-size:.82rem;">${status}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Amount</span><span style="font-weight:700;font-size:.82rem;">${amount}</span></div>
+      </div>
+      <div class="modal-actions">
+        <button class="adm-action-btn gold" onclick="toast('🖨️ Invoice printed!');closeModalDirect()">Print Invoice</button>
+        <button class="adm-action-btn" onclick="toast('📍 Tracking order...');closeModalDirect()">Track</button>
+        <button class="adm-action-btn danger" onclick="toast('❌ Order cancelled!');closeModalDirect()">Cancel Order</button>
+      </div>`;
+  } else if(type==='rider') {
+    const [name]=args;
+    box.innerHTML=`<div class="modal-title">🛵 ${name}</div><div class="modal-sub">Rider Profile</div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Zone</span><span style="font-weight:700;font-size:.82rem;">Makati/BGC</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Deliveries Today</span><span style="font-weight:700;font-size:.82rem;">18</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Rating</span><span style="font-weight:700;font-size:.82rem;">⭐ 4.92</span></div>
+      </div>
+      <div class="modal-actions">
+        <button class="adm-action-btn gold" onclick="toast('🛵 ${name} dispatched!');closeModalDirect()">Dispatch Now</button>
+        <button class="adm-action-btn" onclick="toast('📍 Tracking ${name}...');closeModalDirect()">Track Live</button>
+        <button class="adm-action-btn danger" onclick="toast('⚠️ ${name} deactivated!');closeModalDirect()">Deactivate</button>
+      </div>`;
+  } else if(type==='client') {
+    const [name]=args;
+    box.innerHTML=`<div class="modal-title">🏢 ${name}</div><div class="modal-sub">Corporate Client Profile</div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Plan</span><span style="font-weight:700;font-size:.82rem;">Enterprise</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Monthly Orders</span><span style="font-weight:700;font-size:.82rem;">284</span></div>
+        <div style="display:flex;justify-content:space-between;padding:.7rem;background:var(--stone);border-radius:10px;"><span style="font-size:.8rem;color:var(--slate);">Revenue</span><span style="font-weight:700;color:var(--green);font-size:.82rem;">₱1.2M</span></div>
+      </div>
+      <div class="modal-actions">
+        <button class="adm-action-btn gold" onclick="toast('📧 Message sent to ${name}!');closeModalDirect()">Contact Client</button>
+        <button class="adm-action-btn" onclick="toast('📄 Invoice sent to ${name}!');closeModalDirect()">Send Invoice</button>
+        <button class="adm-action-btn danger" onclick="toast('⚠️ ${name} suspended!');closeModalDirect()">Suspend</button>
+      </div>`;
+  } else {
+    box.innerHTML=templates[type]||'<p>No content</p>';
+  }
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(e){if(e.target===document.getElementById('modal-overlay'))closeModalDirect();}
+function closeModalDirect(){document.getElementById('modal-overlay').classList.remove('open');}
+
+// ══ MENU RENDERING ══
+const catLabels={rice:' Rice Meals',noodles:' Noodles',salads:' Salads',snacks:' Snacks',drinks:' Drinks'};
+
+function renderMenu() {
+  const container=document.getElementById('menu-container');
+  if(!container) return;
+  const filtered=menuItems.filter(i=>{
+    const matchCat=activeCat==='all'||i.cat===activeCat;
+    const matchSearch=i.name.toLowerCase().includes(searchQ)||i.desc.toLowerCase().includes(searchQ);
+    return matchCat&&matchSearch;
+  });
+  if(filtered.length===0){
+    container.innerHTML=`<div style="text-align:center;padding:4rem;color:var(--slate);"><div style="font-size:3rem;margin-bottom:1rem;">🔍</div><div style="font-size:1rem;font-weight:600;">No dishes found</div><div style="font-size:.82rem;margin-top:.4rem;">Try a different keyword or category</div></div>`;
+    return;
+  }
+  let html='';
+  if(activeCat==='all'){
+    ['rice','noodles','salads','snacks','drinks'].forEach(cat=>{
+      const items=filtered.filter(i=>i.cat===cat);
+      if(!items.length) return;
+      html+=`<div class="cat-title">${catLabels[cat]} <span>${items.length} items</span></div><div class="menu-grid">${items.map(renderCard).join('')}</div>`;
+    });
+  } else {
+    html=`<div class="menu-grid" style="margin-top:.5rem;">${filtered.map(renderCard).join('')}</div>`;
+  }
+  container.innerHTML=html;
+}
+
+function renderCard(item) {
+  const inCart=cart[item.id]||0;
+  const badge=item.badge?`<div class="menu-badge ${item.badge}">${item.badge}</div>`:'';
+  const action=inCart>0
+    ?`<div class="qty-ctrl"><button class="qty-btn" onclick="event.stopPropagation();changeQty(${item.id},-1)">−</button><span class="qty-num">${inCart}</span><button class="qty-btn" onclick="event.stopPropagation();changeQty(${item.id},1)">+</button></div>`
+    :`<button class="add-btn" onclick="event.stopPropagation();addToCart(${item.id})" title="Add to cart">+</button>`;
+  return `<div class="menu-card" onclick="toast('🍽️ ${item.name} — ₱${item.price}/serving')">
+    <div class="menu-img">
+      <img src="${item.img}" alt="${item.name}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'font-size:.7rem;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:var(--stone);gap:.3rem;padding:.5rem;text-align:center;\\'><div style=\\'font-size:2rem;\\'>🖼️</div><div style=\\'color:var(--slate);font-weight:600;\\'>Replace image:</div><div style=\\'color:var(--gold);word-break:break-all;\\'>${item.img}</div></div>'"/>
+      ${badge}
+    </div>
+    <div class="menu-body">
+      <div class="menu-name">${item.name}</div>
+      <div class="menu-desc">${item.desc}</div>
+      <div class="menu-footer">
+        <div class="menu-price">₱${item.price}<small>/serving</small></div>
+        ${action}
+      </div>
+    </div>
+  </div>`;
+}
+
+function addToCart(id) {
+  cart[id]=(cart[id]||0)+1;
+  updateCart(); renderMenu();
+  const badge=document.getElementById('cart-count');
+  badge.classList.remove('bump');
+  void badge.offsetWidth;
+  badge.classList.add('bump');
+  toast('✅ Added to cart!');
+}
+function changeQty(id,d){cart[id]=(cart[id]||0)+d;if(cart[id]<=0)delete cart[id];updateCart();renderMenu();}
+function removeItem(id){delete cart[id];updateCart();renderMenu();}
+
+function updateCart() {
+  const keys=Object.keys(cart);
+  const subtotal=keys.reduce((s,id)=>{const it=menuItems.find(i=>i.id===parseInt(id));return s+(it?it.price*cart[id]:0);},0);
+  const count=keys.reduce((s,id)=>s+cart[id],0);
+  document.getElementById('cart-count').textContent=count;
+  document.getElementById('c-sub').textContent=`₱${subtotal.toLocaleString()}`;
+  document.getElementById('c-total').textContent=`₱${(subtotal+(count>0?50:0)).toLocaleString()}`;
+  document.getElementById('checkout-btn').disabled=count===0;
+  renderCartList();
+}
+
+function renderCartList(){
+  const list=document.getElementById('cart-list');
+  const keys=Object.keys(cart);
+  if(!keys.length){list.innerHTML=`<div class="cart-empty"><div class="cart-empty-ic">🛒</div><div>Your cart is empty</div><div style="font-size:.75rem;margin-top:.3rem;">Add items from the menu!</div></div>`;return;}
+  list.innerHTML=keys.map(id=>{
+    const it=menuItems.find(i=>i.id===parseInt(id));if(!it)return'';
+    return `<div class="cart-item">
+      <div class="cart-item-thumb"><img src="${it.img}" alt="${it.name}" onerror="this.src=''"/></div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${it.name}</div>
+        <div class="cart-item-price">₱${it.price} each</div>
+        <div class="cart-item-controls">
+          <button class="qty-btn" style="width:24px;height:24px;font-size:.8rem;" onclick="changeQty(${it.id},-1)">−</button>
+          <span class="qty-num">${cart[id]}</span>
+          <button class="qty-btn" style="width:24px;height:24px;font-size:.8rem;" onclick="changeQty(${it.id},1)">+</button>
+          <button class="cart-rm" onclick="removeItem(${it.id})">✕ Remove</button>
+        </div>
+      </div>
+      <div style="font-weight:700;font-size:.88rem;color:var(--ink);flex-shrink:0;">₱${(it.price*cart[id]).toLocaleString()}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCart(){
+  document.getElementById('cart-drawer').classList.toggle('open');
+  document.getElementById('cart-overlay').classList.toggle('open');
+}
+
+function filterCat(cat,btn){
+  activeCat=cat;
+  document.querySelectorAll('.filter-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMenu();
+}
+
+function filterMenu(){searchQ=document.getElementById('menu-search').value.toLowerCase();renderMenu();}
+
+function doCheckout(){
+  const count=Object.values(cart).reduce((s,q)=>s+q,0);
+  const total=document.getElementById('c-total').textContent;
+  toggleCart();
+  toast(`🎉 Order placed! ${count} items · ${total} — ETA 18 mins 🛵`);
+  cart={};updateCart();renderMenu();}
+
+// ══ CALENDAR ══
+let calDate = new Date(2026, 2, 1); // March 2026
+let calView = 'month';
+let calEvents = [
+  {id:1, date:'2026-03-25', time:'09:00', title:'Bulk delivery — Acme Corp', type:'delivery', notes:'47 Executive Bento Boxes, Makati HQ'},
+  {id:2, date:'2026-03-26', time:'14:00', title:'Client meeting — Metro Bank', type:'meeting', notes:'Q2 contract renewal discussion'},
+  {id:3, date:'2026-03-28', time:'08:00', title:'Rider morning briefing', type:'rider', notes:'New route assignments for Ortigas zone'},
+  {id:4, date:'2026-03-31', time:'12:00', title:'Month-end promo launch', type:'promo', notes:'Free delivery promo for all clients'},
+  {id:5, date:'2026-04-01', time:'10:00', title:'TechHub Inc kickoff', type:'meeting', notes:'Onboarding new enterprise plan'},
+  {id:6, date:'2026-04-05', time:'09:30', title:'Rider performance review', type:'rider', notes:'Monthly ratings and bonuses'},
+];
+let calNextId = 7;
+const calTypeColor = {delivery:'#1a6b45',meeting:'#2563eb',rider:'#c8a96e',promo:'#c0392b',other:'#6b6560'};
+const calTypeIcon = {delivery:'📦',meeting:'🤝',rider:'🛵',promo:'🎉',other:'📌'};
+
+function renderCal() {
+  const grid = document.getElementById('cal-grid');
+  const header = document.getElementById('cal-header');
+  if (!grid) return;
+
+  if (calView === 'month') {
+    const year = calDate.getFullYear(), month = calDate.getMonth();
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    header.textContent = `${months[month]} ${year}`;
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month+1, 0).getDate();
+    const today = new Date();
+    let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--mist);">`;
+    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{
+      html += `<div style="padding:.5rem;text-align:center;font-size:.72rem;font-weight:700;color:var(--slate);letter-spacing:.05em;">${d}</div>`;
+    });
+    html += `</div><div style="display:grid;grid-template-columns:repeat(7,1fr);">`;
+    for(let i=0;i<firstDay;i++) html += `<div style="min-height:90px;border-right:1px solid var(--mist);border-bottom:1px solid var(--mist);background:var(--stone);opacity:.5;"></div>`;
+    for(let d=1;d<=daysInMonth;d++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+      const dayEvents = calEvents.filter(e=>e.date===dateStr);
+      const col = (firstDay+d-1)%7;
+      const isWeekend = col===0||col===6;
+      html += `<div onclick="calDayClick('${dateStr}')" style="min-height:90px;border-right:1px solid var(--mist);border-bottom:1px solid var(--mist);padding:.4rem;cursor:pointer;transition:background .15s;background:${isWeekend?'rgba(0,0,0,0.01)':'var(--white)'};position:relative;" onmouseover="this.style.background='var(--gold3)'" onmouseout="this.style.background='${isWeekend?'rgba(0,0,0,0.01)':'var(--white)'}'">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;">
+          <span style="font-size:.78rem;font-weight:${isToday?'800':'500'};color:${isToday?'var(--white)':'var(--ink)'};background:${isToday?'var(--ink)':'none'};width:${isToday?'24px':'auto'};height:${isToday?'24px':'auto'};border-radius:50%;display:flex;align-items:center;justify-content:center;">${d}</span>
+          ${dayEvents.length>0?`<span style="font-size:.6rem;background:var(--gold);color:var(--ink);padding:1px 5px;border-radius:50px;font-weight:700;">${dayEvents.length}</span>`:''}
+        </div>
+        ${dayEvents.slice(0,2).map(ev=>`<div onclick="event.stopPropagation();calEditEvent(${ev.id})" style="font-size:.65rem;background:${calTypeColor[ev.type]};color:white;border-radius:4px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;" title="${ev.title}">${calTypeIcon[ev.type]} ${ev.title}</div>`).join('')}
+        ${dayEvents.length>2?`<div style="font-size:.6rem;color:var(--slate);padding:0 2px;">+${dayEvents.length-2} more</div>`:''}
+      </div>`;
+    }
+    const totalCells = firstDay+daysInMonth;
+    const remaining = totalCells%7===0?0:7-(totalCells%7);
+    for(let i=0;i<remaining;i++) html += `<div style="min-height:90px;border-right:1px solid var(--mist);border-bottom:1px solid var(--mist);background:var(--stone);opacity:.5;"></div>`;
+    html += `</div>`;
+    grid.innerHTML = html;
+  } else {
+    // Week view
+    const startOfWeek = new Date(calDate);
+    startOfWeek.setDate(calDate.getDate() - calDate.getDay());
+    const days = [];
+    for(let i=0;i<7;i++){
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate()+i);
+      days.push(d);
+    }
+    const fmt = d => `${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+    header.textContent = `${fmt(days[0])} – ${fmt(days[6])}, ${days[0].getFullYear()}`;
+    const today = new Date();
+    let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--mist);">`;
+    days.forEach(d=>{
+      const isToday = d.toDateString()===today.toDateString();
+      html += `<div style="padding:.6rem .4rem;text-align:center;"><div style="font-size:.7rem;font-weight:700;color:var(--slate);letter-spacing:.04em;">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}</div><div style="font-size:1.1rem;font-weight:${isToday?'800':'600'};color:${isToday?'var(--white)':'var(--ink)'};background:${isToday?'var(--ink)':'none'};width:${isToday?'32px':'auto'};height:${isToday?'32px':'auto'};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-top:2px;">${d.getDate()}</div></div>`;
+    });
+    html += `</div><div style="display:grid;grid-template-columns:repeat(7,1fr);">`;
+    days.forEach(d=>{
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dayEvents = calEvents.filter(e=>e.date===dateStr);
+      html += `<div onclick="calDayClick('${dateStr}')" style="min-height:140px;border-right:1px solid var(--mist);border-bottom:1px solid var(--mist);padding:.5rem;cursor:pointer;" onmouseover="this.style.background='var(--gold3)'" onmouseout="this.style.background=''">
+        ${dayEvents.map(ev=>`<div onclick="event.stopPropagation();calEditEvent(${ev.id})" style="font-size:.68rem;background:${calTypeColor[ev.type]};color:white;border-radius:5px;padding:3px 6px;margin-bottom:3px;cursor:pointer;" title="${ev.notes||''}">${calTypeIcon[ev.type]} <strong>${ev.time}</strong><br>${ev.title}</div>`).join('')}
+        ${dayEvents.length===0?`<div style="font-size:.68rem;color:var(--mist);padding:.3rem 0;">No events</div>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+    grid.innerHTML = html;
+  }
+  renderUpcoming();
+}
+
+function renderUpcoming(){
+  const up = document.getElementById('cal-upcoming');
+  if(!up) return;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const upcoming = calEvents.filter(e=>new Date(e.date+'T00:00:00')>=today).sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time)).slice(0,5);
+  if(!upcoming.length){up.innerHTML=`<div style="text-align:center;padding:1rem;color:var(--slate);font-size:.84rem;">No upcoming events</div>`;return;}
+  up.innerHTML=upcoming.map(ev=>`<div style="display:flex;align-items:center;gap:.8rem;padding:.7rem;border-radius:10px;margin-bottom:.4rem;background:var(--stone);cursor:pointer;" onclick="calEditEvent(${ev.id})">
+    <div style="width:36px;height:36px;border-radius:10px;background:${calTypeColor[ev.type]};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">${calTypeIcon[ev.type]}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:.83rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ev.title}</div>
+      <div style="font-size:.73rem;color:var(--slate);">${new Date(ev.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} at ${ev.time}</div>
+    </div>
+    <button onclick="event.stopPropagation();deleteCalEvent(${ev.id})" style="background:none;border:none;color:var(--mist);cursor:pointer;font-size:.9rem;padding:4px;" title="Delete">✕</button>
+  </div>`).join('');
+}
+
+function calNav(dir){
+  if(calView==='month'){
+    calDate.setMonth(calDate.getMonth()+dir);
+  } else {
+    calDate.setDate(calDate.getDate()+dir*7);
+  }
+  renderCal();
+}
+
+function calDayClick(dateStr){
+  openCalEventModal(dateStr);
+}
+
+function openCalEventModal(dateStr){
+  const modal = document.getElementById('cal-event-modal');
+  document.getElementById('cal-modal-title').textContent = 'New Event';
+  document.getElementById('ev-title').value='';
+  document.getElementById('ev-date').value=dateStr||new Date().toISOString().slice(0,10);
+  document.getElementById('ev-time').value='09:00';
+  document.getElementById('ev-type').value='delivery';
+  document.getElementById('ev-notes').value='';
+  modal._editId=null;
+  modal.style.display='flex';
+}
+
+function calEditEvent(id){
+  const ev = calEvents.find(e=>e.id===id);
+  if(!ev) return;
+  const modal = document.getElementById('cal-event-modal');
+  document.getElementById('cal-modal-title').textContent='Edit Event';
+  document.getElementById('ev-title').value=ev.title;
+  document.getElementById('ev-date').value=ev.date;
+  document.getElementById('ev-time').value=ev.time;
+  document.getElementById('ev-type').value=ev.type;
+  document.getElementById('ev-notes').value=ev.notes||'';
+  modal._editId=id;
+  modal.style.display='flex';
+}
+
+function closeCalModal(){
+  document.getElementById('cal-event-modal').style.display='none';
+}
+
+function saveCalEvent(){
+  const title=document.getElementById('ev-title').value.trim();
+  const date=document.getElementById('ev-date').value;
+  const time=document.getElementById('ev-time').value;
+  const type=document.getElementById('ev-type').value;
+  const notes=document.getElementById('ev-notes').value.trim();
+  if(!title||!date){toast('⚠️ Please fill in title and date!');return;}
+  const modal=document.getElementById('cal-event-modal');
+  if(modal._editId){
+    const ev=calEvents.find(e=>e.id===modal._editId);
+    if(ev){ev.title=title;ev.date=date;ev.time=time;ev.type=type;ev.notes=notes;}
+    toast('✅ Event updated!');
+  } else {
+    calEvents.push({id:calNextId++,date,time,title,type,notes});
+    toast('✅ Event created!');
+  }
+  closeCalModal();
+  renderCal();
+}
+
+function deleteCalEvent(id){
+  calEvents=calEvents.filter(e=>e.id!==id);
+  toast('🗑️ Event deleted');
+  renderCal();
+}
+
+// renderCal is called automatically when the calendar panel becomes visible
+
+</script>
+</body>
+</html>
